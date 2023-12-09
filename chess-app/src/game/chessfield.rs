@@ -20,4 +20,12 @@ impl ChessField{
             position: new_position,
         }
     }
+
+    pub fn get_status(&self) -> &Option<Box<dyn Chesspiece>> {
+        &self.status
+    }
+
+    pub fn set_status(&mut self, status: Option<Box<dyn Chesspiece>>){
+        self.status = status;
+    }
 }
