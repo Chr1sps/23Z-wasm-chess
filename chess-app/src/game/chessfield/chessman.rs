@@ -11,6 +11,16 @@ pub struct ChessMove {
     pub end_position: Position,
 }
 
+impl ChessMove{
+    pub fn get_end_position(&self) -> (i32, i32){
+        (self.end_position.row, self.end_position.column)
+    }
+
+    pub fn get_current_position(&self) -> (i32, i32){
+        (self.current_position.row, self.current_position.column)
+    }
+}
+
 pub enum ChessmanStatus {
     Captured,
     NotCaptured,
@@ -22,7 +32,16 @@ pub struct Chessman {
     pub status: ChessmanStatus,
 }
 
-pub trait Chesspiece {
+pub trait ChessPieceTrait{
+
+    fn new_chessman(new_position: Position, new_player: PlayerKind, new_status: ChessmanStatus) -> Chessman where Self: Sized{
+        Chessman{
+            position: new_position,
+            player: new_player, 
+            status: new_status,
+        }
+    }
+
     fn get_moves_lines(&self, directions: Vec<(i32, i32)>) -> Vec<ChessMove>{
         let mut results: Vec<ChessMove> = vec![];
         for direction in directions{
@@ -72,6 +91,14 @@ pub trait Chesspiece {
 
     }
 
+    fn calculate_params(&self) -> Vec<(i32, i32)> {
+        let a = vec![1, 0, -1];
+        let b = vec![1, 0, -1];
+        let mut params: Vec<(i32, i32)> = iproduct!(a, b).collect();
+        params.retain(|&x| x != (0, 0));
+        params
+    }
+
     fn get_moves(&self) -> Vec<ChessMove>;
 
     fn get_player(&self) -> &PlayerKind;
@@ -84,7 +111,8 @@ pub trait Chesspiece {
 // }
 
 
-// impl Chesspiece for Pawn {
+// impl ChessPieceTrait
+// Trait for Pawn {
 //     pub fn get_moves(&self) -> &str {"Move of Pawn"}
 
 // }
@@ -93,10 +121,18 @@ pub struct Rook {
     pub chessman: Chessman,
 }
 
-impl Chesspiece for Rook {
+impl Rook {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> Rook {
+        Rook{
+            chessman: <Rook as ChessPieceTrait>::new_chessman(position, player, status),
+        }
+    }
+}
+
+impl ChessPieceTrait for Rook {
     fn get_moves(&self) -> Vec<ChessMove> {
         let directions:  Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
-        return self.get_moves_lines(directions);
+        self.get_moves_lines(directions)
     }
 
     fn get_player(&self) -> &PlayerKind{
@@ -113,12 +149,9 @@ pub struct King {
     pub chessman: Chessman,
 }
 
-impl Chesspiece for King {
+impl ChessPieceTrait for King {
     fn get_moves(&self) -> Vec<ChessMove> {
-        let a = vec![1, 0, -1];
-        let b = vec![1, 0, -1];
-        let mut possible_shifts: Vec<(i32, i32)> = iproduct!(a, b).collect();
-        possible_shifts.retain(|&x| x != (0, 0));
+        let possible_shifts: Vec<(i32, i32)> = self.calculate_params();
         self.get_moves_shifts(possible_shifts)
     }
 
@@ -135,12 +168,9 @@ pub struct Queen {
     pub chessman: Chessman,
 }
 
-impl Chesspiece for Queen {
+impl ChessPieceTrait for Queen {
     fn get_moves(&self) -> Vec<ChessMove> {
-        let a = vec![1, 0, -1];
-        let b = vec![1, 0, -1];
-        let mut directions: Vec<(i32, i32)> = iproduct!(a, b).collect();
-        directions.retain(|&x| x != (0, 0));
+        let directions: Vec<(i32, i32)> = self.calculate_params();
         return self.get_moves_lines(directions);
 
     }
@@ -159,7 +189,7 @@ pub struct Bishop {
     pub chessman: Chessman,
 }
 
-impl Chesspiece for Bishop {
+impl ChessPieceTrait for Bishop {
     fn get_moves(&self) -> Vec<ChessMove> {
         let a = vec![-1, 1];
         let b = vec![-1, 1];
@@ -181,15 +211,21 @@ pub struct Knight {
     pub chessman: Chessman,
 }
 
-impl Chesspiece for Knight {
+impl ChessPieceTrait for Knight {
     fn get_moves(&self) -> Vec<ChessMove> {
+        let possible_shifts: Vec<(i32, i32)> = self.calculate_params();
+        return self.get_moves_shifts(possible_shifts);
+
+    }
+
+    fn calculate_params(&self) -> Vec<(i32, i32)>{
         let a = vec![-2, 2];
         let b = vec![-1, 1];
         let mut possible_shifts: Vec<(i32, i32)> = iproduct!(a.clone(), b.clone()).collect();
         possible_shifts.extend(iproduct!(b, a).collect::<Vec<(i32, i32)>>());
-        return self.get_moves_shifts(possible_shifts);
-
+        possible_shifts
     }
+
     fn get_player(&self) -> &PlayerKind{
         &self.chessman.player
     }
