@@ -1,6 +1,6 @@
 pub use chessfield::chessman::basic::PlayerKind;
 pub use chessfield::chessman::basic::Position;
-pub use chessfield::chessman::Rook;
+pub use chessfield::chessman::Chesspiece;
 pub use chessfield::chessman::ChessMove;
 pub use chessfield::ChessField;
 use std::ops::Not;
@@ -70,7 +70,7 @@ impl Game {
         }
     }
 
-    pub fn set_field(&mut self, position: (i32, i32), chesspiece: Rook ) {
+    pub fn set_field<T: Chesspiece + 'static>(&mut self, position: (i32, i32), chesspiece: T ) {
         let (row, column) = position;
         let row_i = row as usize;
         let column_i = column as usize;

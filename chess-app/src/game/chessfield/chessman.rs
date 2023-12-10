@@ -1,5 +1,7 @@
 pub use basic::PlayerKind;
 pub use basic::Position;
+use itertools::iproduct;
+
 
 pub mod basic;
 
@@ -107,38 +109,93 @@ impl Chesspiece for Rook {
 
 }
 
-// struct King {
-//     chessman: Chessman,
-// }
+pub struct King {
+    pub chessman: Chessman,
+}
 
-// impl Chesspiece for King {
-//     fn get_moves(&self) -> &str {"Move of King"}
+impl Chesspiece for King {
+    fn get_moves(&self) -> Vec<ChessMove> {
+        let a = vec![1, 0, -1];
+        let b = vec![1, 0, -1];
+        let mut possible_shifts: Vec<(i32, i32)> = iproduct!(a, b).collect();
+        possible_shifts.retain(|&x| x != (0, 0));
+        self.get_moves_shifts(possible_shifts)
+    }
 
-// }
+    fn get_player(&self) -> &PlayerKind{
+        &self.chessman.player
+    }
 
-// struct Queen {
-//     chessman: Chessman,
-// }
+    fn get_position(&self) -> &Position{
+        &self.chessman.position
+    }
+}
 
-// impl Chesspiece for Queen {
-//     fn get_moves(&self) -> &str {"Move of Queen"}
+pub struct Queen {
+    pub chessman: Chessman,
+}
 
-// }
+impl Chesspiece for Queen {
+    fn get_moves(&self) -> Vec<ChessMove> {
+        let a = vec![1, 0, -1];
+        let b = vec![1, 0, -1];
+        let mut directions: Vec<(i32, i32)> = iproduct!(a, b).collect();
+        directions.retain(|&x| x != (0, 0));
+        return self.get_moves_lines(directions);
 
-// struct Bishop {
-//     chessman: Chessman,
-// }
+    }
 
-// impl Chesspiece for Bishop {
-//     fn get_moves(&self) -> &str {"Move of Bishop"}
+    fn get_player(&self) -> &PlayerKind{
+        &self.chessman.player
+    }
 
-// }
+    fn get_position(&self) -> &Position{
+        &self.chessman.position
+    }
 
-// struct Knight {
-//     chessman: Chessman,
-// }
+}
 
-// impl Chesspiece for Knight {
-//     fn get_moves(&self) -> &str {"Move of Knight"}
+pub struct Bishop {
+    pub chessman: Chessman,
+}
 
-// }
+impl Chesspiece for Bishop {
+    fn get_moves(&self) -> Vec<ChessMove> {
+        let a = vec![-1, 1];
+        let b = vec![-1, 1];
+        return self.get_moves_lines(iproduct!(a, b).collect());
+    }
+
+    fn get_player(&self) -> &PlayerKind{
+        &self.chessman.player
+    }
+
+    fn get_position(&self) -> &Position{
+        &self.chessman.position
+    }
+
+
+}
+
+pub struct Knight {
+    pub chessman: Chessman,
+}
+
+impl Chesspiece for Knight {
+    fn get_moves(&self) -> Vec<ChessMove> {
+        let a = vec![-2, 2];
+        let b = vec![-1, 1];
+        let mut possible_shifts: Vec<(i32, i32)> = iproduct!(a.clone(), b.clone()).collect();
+        possible_shifts.extend(iproduct!(b, a).collect::<Vec<(i32, i32)>>());
+        return self.get_moves_shifts(possible_shifts);
+
+    }
+    fn get_player(&self) -> &PlayerKind{
+        &self.chessman.player
+    }
+
+    fn get_position(&self) -> &Position{
+        &self.chessman.position
+    }
+
+}
