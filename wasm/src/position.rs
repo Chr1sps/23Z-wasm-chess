@@ -15,7 +15,14 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new(row: u8, column: u8) -> Option<Self> {
+    pub fn to_tuple(&self) -> (u8, u8) {
+        (self.column, self.row)
+    }
+}
+
+#[wasm_bindgen]
+impl Position {
+    pub fn new(row: u8, column: u8) -> Option<Position> {
         let range = 0..=7 as u8;
         if range.contains(&row) && range.contains(&column) {
             Some(Self { row, column })
@@ -29,9 +36,5 @@ impl Position {
     }
     pub fn get_column(&self) -> u8 {
         self.column
-    }
-
-    pub fn to_tuple(&self) -> (u8, u8) {
-        (self.column, self.row)
     }
 }

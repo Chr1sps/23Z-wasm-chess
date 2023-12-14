@@ -4,8 +4,10 @@
 
 ### Dependencies
 
-The project relies on Rust with wasm-pack and SvelteKit with TypeScript on
-npm.
+- Rust toolchain (`rustup`) with `wasm-pack`
+- node.js version 20 (Iron LTS) with npm
+
+### Linux
 
 ```sh
 # Rust toolchain
@@ -26,7 +28,7 @@ nvm install 'v20.9.0'
 npm install -g 'npm@10.2.5'
 ```
 
-### The app itself
+#### The app itself
 
 ```sh
 git clone https://gitlab-stud.elka.pw.edu.pl/kpalucki/zpr-2023z
@@ -36,7 +38,7 @@ npm run build:all # compiles the wasm module and builds the project
 npm preview # launches the app
 ```
 
-### Installation through Docker
+### Docker
 
 ```shell
 docker build -t wasm-chess-game .
