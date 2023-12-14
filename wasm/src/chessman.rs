@@ -1,5 +1,5 @@
-pub use crate::basic::PlayerKind;
-pub use crate::basic::Position;
+pub use crate::position::PlayerKind;
+pub use crate::position::Position;
 use core::any::Any;
 use itertools::iproduct;
 use wasm_bindgen::prelude::*;
@@ -21,14 +21,14 @@ impl ChessMove {
     }
 }
 
-pub struct Chessman {
+pub struct ChessPiece {
     position: Position,
     player: PlayerKind,
 }
 
-impl Chessman {
-    pub fn new(new_position: Position, new_player: PlayerKind) -> Chessman {
-        Chessman {
+impl ChessPiece {
+    pub fn new(new_position: Position, new_player: PlayerKind) -> ChessPiece {
+        ChessPiece {
             position: new_position,
             player: new_player,
         }
@@ -71,7 +71,7 @@ pub trait ChessPieceTrait: Any {
     fn create_move(&self, new_column: u8, new_row: u8) -> Option<ChessMove> {
         if let Some(end_position) = Position::new(new_row, new_column) {
             Some(ChessMove {
-                current_position: *(self.get_position()),
+                current_position: self.get_position(),
                 end_position,
             })
         } else {
@@ -89,21 +89,22 @@ pub trait ChessPieceTrait: Any {
 
     fn get_moves(&self) -> Vec<ChessMove>;
 
-    fn get_player(&self) -> &PlayerKind;
+    fn get_player(&self) -> PlayerKind;
 
-    fn get_position(&self) -> &Position;
+    fn get_position(&self) -> Position;
 }
 
 pub struct Pawn {
-    chessman: Chessman,
+    chessman: ChessPiece,
     pub first_move: bool,
+    #[allow(dead_code)]
     is_en_passantable: bool,
 }
 
 impl Pawn {
     pub fn new(position: Position, player: PlayerKind) -> Pawn {
         Pawn {
-            chessman: Chessman::new(position, player),
+            chessman: ChessPiece::new(position, player),
             first_move: true,
             is_en_passantable: false,
         }
@@ -120,23 +121,23 @@ impl ChessPieceTrait for Pawn {
         self.first_move
     }
 
-    fn get_player(&self) -> &PlayerKind {
-        &self.chessman.player
+    fn get_player(&self) -> PlayerKind {
+        self.chessman.player
     }
 
-    fn get_position(&self) -> &Position {
-        &self.chessman.position
+    fn get_position(&self) -> Position {
+        self.chessman.position
     }
 }
 
 pub struct Rook {
-    chessman: Chessman,
+    chessman: ChessPiece,
 }
 
 impl Rook {
     pub fn new(position: Position, player: PlayerKind) -> Rook {
         Rook {
-            chessman: Chessman::new(position, player),
+            chessman: ChessPiece::new(position, player),
         }
     }
 }
@@ -147,23 +148,23 @@ impl ChessPieceTrait for Rook {
         self.get_moves_lines(directions)
     }
 
-    fn get_player(&self) -> &PlayerKind {
-        &self.chessman.player
+    fn get_player(&self) -> PlayerKind {
+        self.chessman.player
     }
 
-    fn get_position(&self) -> &Position {
-        &self.chessman.position
+    fn get_position(&self) -> Position {
+        self.chessman.position
     }
 }
 
 pub struct King {
-    chessman: Chessman,
+    chessman: ChessPiece,
 }
 
 impl King {
     pub fn new(position: Position, player: PlayerKind) -> King {
         King {
-            chessman: Chessman::new(position, player),
+            chessman: ChessPiece::new(position, player),
         }
     }
 }
@@ -174,23 +175,23 @@ impl ChessPieceTrait for King {
         self.get_moves_shifts(possible_shifts)
     }
 
-    fn get_player(&self) -> &PlayerKind {
-        &self.chessman.player
+    fn get_player(&self) -> PlayerKind {
+        self.chessman.player
     }
 
-    fn get_position(&self) -> &Position {
-        &self.chessman.position
+    fn get_position(&self) -> Position {
+        self.chessman.position
     }
 }
 
 pub struct Queen {
-    chessman: Chessman,
+    chessman: ChessPiece,
 }
 
 impl Queen {
     pub fn new(position: Position, player: PlayerKind) -> Queen {
         Queen {
-            chessman: Chessman::new(position, player),
+            chessman: ChessPiece::new(position, player),
         }
     }
 }
@@ -201,22 +202,22 @@ impl ChessPieceTrait for Queen {
         return self.get_moves_lines(directions);
     }
 
-    fn get_player(&self) -> &PlayerKind {
-        &self.chessman.player
+    fn get_player(&self) -> PlayerKind {
+        self.chessman.player
     }
 
-    fn get_position(&self) -> &Position {
-        &self.chessman.position
+    fn get_position(&self) -> Position {
+        self.chessman.position
     }
 }
 
 pub struct Bishop {
-    chessman: Chessman,
+    chessman: ChessPiece,
 }
 impl Bishop {
     pub fn new(position: Position, player: PlayerKind) -> Bishop {
         Bishop {
-            chessman: Chessman::new(position, player),
+            chessman: ChessPiece::new(position, player),
         }
     }
 }
@@ -228,23 +229,23 @@ impl ChessPieceTrait for Bishop {
         return self.get_moves_lines(iproduct!(a, b).collect());
     }
 
-    fn get_player(&self) -> &PlayerKind {
-        &self.chessman.player
+    fn get_player(&self) -> PlayerKind {
+        self.chessman.player
     }
 
-    fn get_position(&self) -> &Position {
-        &self.chessman.position
+    fn get_position(&self) -> Position {
+        self.chessman.position
     }
 }
 
 pub struct Knight {
-    chessman: Chessman,
+    chessman: ChessPiece,
 }
 
 impl Knight {
     pub fn new(position: Position, player: PlayerKind) -> Knight {
         Knight {
-            chessman: Chessman::new(position, player),
+            chessman: ChessPiece::new(position, player),
         }
     }
 }
@@ -263,45 +264,11 @@ impl ChessPieceTrait for Knight {
         possible_shifts
     }
 
-    fn get_player(&self) -> &PlayerKind {
-        &self.chessman.player
+    fn get_player(&self) -> PlayerKind {
+        self.chessman.player
     }
 
-    fn get_position(&self) -> &Position {
-        &self.chessman.position
+    fn get_position(&self) -> Position {
+        self.chessman.position
     }
 }
-
-// pub enum ChessPiece {
-//     Pawn {
-//         data: Chessman,
-//         first_move: bool,
-//         is_en_passantable: bool,
-//     },
-//     Knight {
-//         data: Chessman,
-//     },
-//     Bishop {
-//         data: Chessman,
-//     },
-//     Rook {
-//         data: Chessman,
-//     },
-//     Queen {
-//         data: Chessman,
-//     },
-//     King {
-//         data: Chessman,
-//     },
-// }
-
-// impl ChessPiece {
-//     fn make_knight() -> Option<Self> {}
-//     fn get_moves(&self) -> Vec<ChessMove>;
-
-//     fn get_player(&self) -> &PlayerKind;
-
-//     fn get_position(&self) -> &Position;
-
-//     fn get_kind(&self) -> &ChessmanKind;
-// }

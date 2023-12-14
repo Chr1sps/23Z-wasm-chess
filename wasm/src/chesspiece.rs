@@ -1,6 +1,6 @@
-pub use crate::basic::Position;
-use crate::gamestate::GameState;
 pub use crate::player::Player;
+// use crate::GameState;
+pub use crate::Position;
 use core::any::Any;
 use itertools::iproduct;
 use wasm_bindgen::prelude::*;
@@ -83,8 +83,6 @@ pub trait ChessPieceTrait: Any {
         params.retain(|&x| x != (0, 0));
         params
     }
-
-    // fn get_possible_moves(&self) -> Vec<ChessMove>;
 
     fn get_moves(&self, state: &GameState) -> Vec<ChessMove>;
 

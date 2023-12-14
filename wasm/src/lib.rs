@@ -1,20 +1,17 @@
-pub use basic::PlayerKind;
-pub use basic::Position;
-pub use chessfield::ChessField;
 pub use chessman::ChessMove;
 pub use chessman::ChessPieceTrait;
+pub use field::ChessField;
+pub use position::PlayerKind;
+pub use position::Position;
 use std::mem;
 use std::ops::Not;
 use wasm_bindgen::prelude::*;
 
-pub mod basic;
-pub mod chessfield;
 pub mod chessman;
-
-#[derive(Debug)]
-pub struct MyError {
-    pub message: String,
-}
+pub mod field;
+// mod gamestate;
+mod player;
+pub mod position;
 
 #[wasm_bindgen]
 #[repr(u8)]
@@ -51,12 +48,12 @@ impl Game {
         self.status = new_status;
     }
 
-    pub fn get_current_player(&self) -> &PlayerKind {
-        &self.current_player
+    pub fn get_current_player(&self) -> PlayerKind {
+        self.current_player
     }
 
-    pub fn get_other_player(&self) -> &PlayerKind {
-        &self.other_player
+    pub fn get_other_player(&self) -> PlayerKind {
+        self.other_player
     }
 
     pub fn change_round(&mut self) {
@@ -76,14 +73,12 @@ impl Game {
         chessboard
     }
 
-    pub fn make_move(&self, position: Position) -> Result<Vec<ChessMove>, MyError> {
+    pub fn make_move(&self, position: Position) -> Result<Vec<ChessMove>, String> {
         let (row, column) = position.to_tuple();
         let mut filtered_results: Vec<ChessMove> = vec![];
         let chessfield: &ChessField = self.get_field(row, column);
         match chessfield.get_status() {
-            None => Err(MyError {
-                message: "You must select field with chesspiece".to_string(),
-            }),
+            None => Err("You must select field with chesspiece".to_string()),
             Some(chessman) => {
                 let results: Vec<ChessMove> = chessman.get_moves();
                 for result in results {
@@ -105,13 +100,13 @@ impl Game {
         }
     }
 
-    pub fn make_pawn_move(&self, start_position: Position) -> Result<Vec<ChessMove>, MyError> {
+    pub fn make_pawn_move(&self, start_position: Position) -> Result<Vec<ChessMove>, String> {
         let mut results: Vec<ChessMove> = vec![];
 
         let (row, column) = start_position.to_tuple();
         let right_column = column + 1;
         let left_column = row - 1;
-        let row_shift: i32 = if self.get_current_player() == &PlayerKind::White {
+        let row_shift: i32 = if self.get_current_player() == PlayerKind::White {
             1
         } else {
             -1
@@ -150,7 +145,7 @@ impl Game {
             results.push(chessmove.unwrap());
         }
 
-        if right_column >= 0 && right_column < 8 {
+        if (0..8 as u8).contains(&right_column) {
             let right_diagonal = self
                 .get_field((row as i32 + row_shift) as u8, right_column)
                 .get_status();
@@ -167,7 +162,7 @@ impl Game {
             // is_en_passantable
         }
 
-        if left_column >= 0 && left_column < 8 {
+        if (0..8 as u8).contains(&left_column) {
             let left_diagonal = self
                 .get_field((row as i32 + row_shift) as u8, left_column)
                 .get_status();
@@ -219,8 +214,8 @@ mod tests {
     fn test_change_round() {
         let mut game = Game::new();
         game.change_round();
-        assert_eq!(game.get_current_player(), &PlayerKind::Black);
-        assert_eq!(game.get_other_player(), &PlayerKind::White);
+        assert_eq!(game.get_current_player(), PlayerKind::Black);
+        assert_eq!(game.get_other_player(), PlayerKind::White);
     }
 
     #[test]

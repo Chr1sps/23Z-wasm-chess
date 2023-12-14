@@ -1,6 +1,10 @@
 use crate::{ChessField, ChessMove, Player};
+use wasm_bindgen::prelude::*;
 
-enum PromotionType {
+#[wasm_bindgen]
+#[repr(u8)]
+#[derive(Clone)]
+pub enum PromotionType {
     Queen,
     Rook,
     Bishop,
