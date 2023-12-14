@@ -5,8 +5,8 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"wasm": "wasm-pack build --target web ./wasm/pkg",
-		"build:all": "wasm-pack build --target web ./wasm/pkg && vite build",
+		"wasm": "wasm-pack build --target web ./wasm",
+		"build:all": "wasm-pack build --target web ./wasm && vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",

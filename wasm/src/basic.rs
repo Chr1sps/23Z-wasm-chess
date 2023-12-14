@@ -16,7 +16,7 @@ pub struct Position {
 
 impl Position {
     pub fn new(row: u8, column: u8) -> Option<Self> {
-        let range = (1..=8 as u8);
+        let range = (0..=7 as u8);
         if (range.contains(&row) && range.contains(&column)) {
             Some(Self { row, column })
         } else {
