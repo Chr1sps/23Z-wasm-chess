@@ -5,6 +5,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"wasm": "wasm-pack build --target web ./wasm/pkg",
 		"build:all": "wasm-pack build --target web ./wasm/pkg && vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -26,7 +27,7 @@
 		"vite-plugin-top-level-await": "^1.4.1",
 		"vite-plugin-wasm": "^3.3.0",
 		"vitest": "^0.34.0",
-		"wasm": "file:wasm/pkg"
+		"wasm-chess": "file:wasm/pkg"
 	},
 	"type": "module"
 }

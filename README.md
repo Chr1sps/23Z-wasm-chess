@@ -17,12 +17,13 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 # nvm, npm and other node.js related stuff
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 
-# when using nvm you need to source the nvm variables in order to gain access
-# to all the installed node and npm binaries
+# when using nvm you need to source the nvm variables in order to add the npm
+# and node.js binaries to the PATH
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 nvm install 'v20.9.0'
+npm install -g 'npm@10.2.5'
 ```
 
 ### The app itself
