@@ -8,6 +8,7 @@
 		"wasm": "wasm-pack build --target web ./wasm",
 		"build:all": "wasm-pack build --target web ./wasm && vite build",
 		"preview": "vite preview",
+		"host": "vite preview --host 0.0.0.0",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest",

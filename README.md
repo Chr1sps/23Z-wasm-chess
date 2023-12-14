@@ -9,10 +9,10 @@ npm.
 
 ```sh
 # Rust toolchain
-curl https://sh.rustup.rs -sSf | sh
+curl https://sh.rustup.rs -sSf | sh -s
 
 # Rust wasm-pack
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh 
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # nvm, npm and other node.js related stuff
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
@@ -34,4 +34,11 @@ cd zpr-2023z
 npm install # installs all the frontend dependencies
 npm run build:all # compiles the wasm module and builds the project
 npm preview # launches the app
+```
+
+### Installation through Docker
+
+```shell
+docker build -t wasm-chess-game .
+docker run --detach --name wasm-chess-game --rm -p 4173:4173 wasm-chess-game
 ```
