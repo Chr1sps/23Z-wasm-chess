@@ -1,2 +1,4 @@
 <h1>Chess</h1>
-<p><a href="/game">Game link</a></p>
+<form method="post">
+	<button type="submit">New game</button>
+</form>
