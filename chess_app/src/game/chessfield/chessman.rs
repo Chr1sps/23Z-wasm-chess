@@ -1,9 +1,19 @@
 pub use basic::PlayerKind;
 pub use basic::Position;
 use itertools::iproduct;
+use core::any::Any;
 
 
 pub mod basic;
+
+pub enum ChessmanKind{
+    Pawn,
+    Rook, 
+    Bishop,
+    Knight, 
+    King,
+    Queen
+}
 
 #[derive(Debug)]
 pub struct ChessMove {
@@ -30,22 +40,28 @@ pub struct Chessman {
     position: Position,
     player: PlayerKind, 
     status: ChessmanStatus,
+    kind: ChessmanKind,
 }
 
 impl Chessman {
-    pub fn new(new_position: Position, new_player: PlayerKind, new_status: ChessmanStatus) -> Chessman{
+    pub fn new(new_position: Position, new_player: PlayerKind, new_status: ChessmanStatus, new_kind: ChessmanKind) -> Chessman{
         Chessman{
             position: new_position,
             player: new_player, 
             status: new_status,
+            kind: new_kind,
         }
     }
 }
 
-pub trait ChessPieceTrait{
+pub trait ChessPieceTrait: Any {
 
-    fn new_chessman(new_position: Position, new_player: PlayerKind, new_status: ChessmanStatus) -> Chessman where Self: Sized{
-        Chessman::new(new_position, new_player, new_status)
+    fn new_chessman(new_position: Position, new_player: PlayerKind, new_status: ChessmanStatus, new_kind: ChessmanKind) -> Chessman where Self: Sized{
+        Chessman::new(new_position, new_player, new_status, new_kind)
+    }
+
+    fn is_first_move(&self) -> &bool{
+        &false
     }
 
     fn get_moves_lines(&self, directions: Vec<(i32, i32)>) -> Vec<ChessMove>{
@@ -110,42 +126,34 @@ pub trait ChessPieceTrait{
     fn get_player(&self) -> &PlayerKind;
 
     fn get_position(&self) -> &Position;
+
+    fn get_kind(&self) -> &ChessmanKind;
 }
 
-// struct Pawn {
-//     chessman: Chessman,
-// }
-
-// impl Pawn {
-//     pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> Pawn {
-//         Pawn{
-//             chessman: <Pawn as ChessPieceTrait>::new_chessman(position, player, status),
-//         }
-//     }
-// }
-
-// impl ChessPieceTrait
-// Trait for Pawn {
-//     pub fn get_moves(&self) -> &str {"Move of Pawn"}
-
-// }
-
-pub struct Rook {
+pub struct Pawn {
     chessman: Chessman,
+    pub first_move: bool,
+    is_en_passantable: bool,
 }
 
-impl Rook {
-    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> Rook {
-        Rook{
-            chessman: <Rook as ChessPieceTrait>::new_chessman(position, player, status),
+impl Pawn {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus, kind: ChessmanKind) -> Pawn {
+        Pawn{
+            chessman: <Pawn as ChessPieceTrait>::new_chessman(position, player, status, kind),
+            first_move: true,
+            is_en_passantable: false,
         }
     }
 }
 
-impl ChessPieceTrait for Rook {
+impl ChessPieceTrait for Pawn {
     fn get_moves(&self) -> Vec<ChessMove> {
-        let directions:  Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
-        self.get_moves_lines(directions)
+        let result: Vec<ChessMove> = vec![];
+        result
+    }
+
+    fn is_first_move(&self) -> &bool {
+        &self.first_move
     }
 
     fn get_player(&self) -> &PlayerKind{
@@ -156,6 +164,43 @@ impl ChessPieceTrait for Rook {
         &self.chessman.position
     }
 
+    fn get_kind(&self) -> &ChessmanKind{
+        &self.chessman.kind
+    }
+
+}
+
+pub struct Rook {
+    chessman: Chessman,
+}
+
+impl Rook {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus, kind: ChessmanKind) -> Rook {
+        Rook{
+            chessman: <Rook as ChessPieceTrait>::new_chessman(position, player, status, kind),
+        }
+    }
+}
+
+impl ChessPieceTrait for Rook {
+    fn get_moves(&self) -> Vec<ChessMove> {
+        let directions:  Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
+        self.get_moves_lines(directions)
+    }
+    
+
+    fn get_player(&self) -> &PlayerKind{
+        &self.chessman.player
+    }
+
+    fn get_position(&self) -> &Position{
+        &self.chessman.position
+    }
+
+    fn get_kind(&self) -> &ChessmanKind{
+        &self.chessman.kind
+    }
+
 }
 
 pub struct King {
@@ -163,9 +208,9 @@ pub struct King {
 }
 
 impl King{
-    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> King {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus, kind: ChessmanKind) -> King {
         King{
-            chessman: <King as ChessPieceTrait>::new_chessman(position, player, status),
+            chessman: <King as ChessPieceTrait>::new_chessman(position, player, status, kind),
         }
     }
 }
@@ -183,6 +228,10 @@ impl ChessPieceTrait for King {
     fn get_position(&self) -> &Position{
         &self.chessman.position
     }
+
+    fn get_kind(&self) -> &ChessmanKind{
+        &self.chessman.kind
+    }
 }
 
 pub struct Queen {
@@ -190,9 +239,9 @@ pub struct Queen {
 }
 
 impl Queen {
-    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> Queen {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus, kind: ChessmanKind) -> Queen {
         Queen{
-            chessman: <Queen as ChessPieceTrait>::new_chessman(position, player, status),
+            chessman: <Queen as ChessPieceTrait>::new_chessman(position, player, status, kind),
         }
     }
 }
@@ -212,15 +261,19 @@ impl ChessPieceTrait for Queen {
         &self.chessman.position
     }
 
+    fn get_kind(&self) -> &ChessmanKind{
+        &self.chessman.kind
+    }
+
 }
 
 pub struct Bishop {
     chessman: Chessman,
 }
 impl Bishop {
-    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> Bishop {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus, kind: ChessmanKind) -> Bishop {
         Bishop{
-            chessman: <Bishop as ChessPieceTrait>::new_chessman(position, player, status),
+            chessman: <Bishop as ChessPieceTrait>::new_chessman(position, player, status, kind),
         }
     }
 }
@@ -240,6 +293,10 @@ impl ChessPieceTrait for Bishop {
         &self.chessman.position
     }
 
+    fn get_kind(&self) -> &ChessmanKind{
+        &self.chessman.kind
+    }
+
 
 }
 
@@ -248,9 +305,9 @@ pub struct Knight {
 }
 
 impl Knight {
-    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus) -> Knight {
+    pub fn new(position: Position, player: PlayerKind, status: ChessmanStatus, kind: ChessmanKind) -> Knight {
         Knight{
-            chessman: <Knight as ChessPieceTrait>::new_chessman(position, player, status),
+            chessman: <Knight as ChessPieceTrait>::new_chessman(position, player, status, kind),
         }
     }
 }
@@ -276,6 +333,10 @@ impl ChessPieceTrait for Knight {
 
     fn get_position(&self) -> &Position{
         &self.chessman.position
+    }
+
+    fn get_kind(&self) -> &ChessmanKind{
+        &self.chessman.kind
     }
 
 }

@@ -2,6 +2,7 @@ pub use chessfield::chessman::basic::PlayerKind;
 pub use chessfield::chessman::basic::Position;
 pub use chessfield::chessman::ChessPieceTrait;
 pub use chessfield::chessman::ChessMove;
+pub use chessfield::chessman::ChessmanKind;
 pub use chessfield::ChessField;
 use std::ops::Not;
 use std::mem;
@@ -20,8 +21,8 @@ pub enum Status {
 }
 
 pub struct Game {
-    pub current_player: PlayerKind,
-    pub other_player: PlayerKind,
+    current_player: PlayerKind,
+    other_player: PlayerKind,
     pub status: Status,
     chessboard: Vec<Vec<ChessField>>,
 
@@ -36,6 +37,14 @@ impl Game {
             chessboard: Game::init_board(),
         
         }
+    }
+
+    pub fn get_game_status(&self) -> &Status {
+        &self.status
+    }
+
+    pub fn set_game_status(&mut self, new_status: Status) {
+        self.status = new_status;
     }
 
     pub fn get_current_player(&self) -> &PlayerKind{
@@ -84,6 +93,54 @@ impl Game {
                 Ok(filtered_results)
             },
         }
+    }
+
+    pub fn make_pawn_move(&self, start_position: (i32, i32)) -> Result<Vec<ChessMove>, MyError> {
+
+        let mut results: Vec<ChessMove> = vec![];
+
+        let (row, column) = start_position;
+        let right_column = column + 1;
+        let left_column = row - 1;
+        let row_shift = if self.get_current_player() == &PlayerKind::White { 1 } else { -1 };
+
+        let chessfield: &ChessField = self.get_field(row, column);
+        
+        if self.get_field(row + row_shift, column).get_status().is_none(){
+            let chessmove = chessfield.get_status().as_ref().unwrap().create_move(column, row + row_shift);
+            results.push(chessmove.unwrap());
+        }
+
+        if *chessfield.get_status().as_ref().unwrap().is_first_move() 
+           && self.get_field(row + row_shift, column).get_status().is_none()
+           && self.get_field(row + 2 *row_shift, column).get_status().is_none(){
+            let chessmove = chessfield.get_status().as_ref().unwrap().create_move(column, row + 2 * row_shift);
+            results.push(chessmove.unwrap());
+        }
+
+        if right_column >= 0 && right_column < 8 {
+            let right_diagonal = self.get_field(row + row_shift, right_column).get_status();
+            if right_diagonal.is_some()
+               && right_diagonal.as_ref().unwrap().get_player() != self.get_current_player(){
+                let chessmove = chessfield.get_status().as_ref().unwrap().create_move(right_column, row + row_shift);
+                results.push(chessmove.unwrap());
+            }
+            // is_en_passantable
+
+        }
+
+        if left_column >= 0 && left_column < 8 {
+            let left_diagonal = self.get_field(row + row_shift, left_column).get_status();
+            if left_diagonal.is_some()
+               && left_diagonal.as_ref().unwrap().get_player() != self.get_current_player(){
+                let chessmove = chessfield.get_status().as_ref().unwrap().create_move(left_column, row + row_shift);
+                results.push(chessmove.unwrap());
+               }
+            // is_en_passantable
+        }
+        println!("{:#?}", results);
+        println!("{}", results.len());
+        Ok(results)
     }
 
     pub fn set_field<T: ChessPieceTrait + 'static>(&mut self, position: (i32, i32), chesspiece: T ) {
