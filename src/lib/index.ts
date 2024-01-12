@@ -20,17 +20,26 @@ export const enum PieceType {
 	King
 }
 
-export const piece_img_map = {
-	white_knight,
-	white_bishop,
-	white_pawn,
-	white_king,
-	white_rook,
-	white_queen,
-	black_knight,
-	black_bishop,
-	black_pawn,
-	black_king,
-	black_rook,
-	black_queen
+export const enum Player {
+	White,
+	Black
+}
+
+export const piece_map = {
+	[Player.White]: {
+		[PieceType.Pawn]: white_pawn,
+		[PieceType.Knight]: white_knight,
+		[PieceType.Bishop]: white_bishop,
+		[PieceType.Rook]: white_rook,
+		[PieceType.Queen]: white_queen,
+		[PieceType.King]: white_king
+	},
+	[Player.Black]: {
+		[PieceType.Pawn]: black_pawn,
+		[PieceType.Knight]: black_knight,
+		[PieceType.Bishop]: black_bishop,
+		[PieceType.Rook]: black_rook,
+		[PieceType.Queen]: black_queen,
+		[PieceType.King]: black_king
+	}
 };
