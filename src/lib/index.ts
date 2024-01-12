@@ -24,6 +24,7 @@ export const enum Player {
 	White,
 	Black
 }
+export type PieceData = [Player, PieceType];
 
 export const piece_map = {
 	[Player.White]: {
