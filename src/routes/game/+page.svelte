@@ -2,9 +2,9 @@
 	import type { PieceData, Position } from '$lib/index';
 	import { PieceType, Player } from '$lib/index';
 	import Field from './Field.svelte';
-	import PromotionChoice from './PromotionChoice.svelte';
+	import PromotionSelector from './PromotionSelector.svelte';
 
-	let rows = [1, 2, 3, 4, 5, 6, 7, 8];
+	let rows = [8, 7, 6, 5, 4, 3, 2, 1];
 	let columns = 'ABCDEFGH';
 	let starting_position: Array<Array<PieceData | null>> = [
 		[
@@ -34,50 +34,82 @@
 			[Player.Black, PieceType.Rook]
 		]
 	];
-	let promotion_types = [
-		PieceType.Knight,
-		PieceType.Bishop,
-		PieceType.Rook,
-		PieceType.Queen
-	];
 	let current_player = Player.White;
-	let selected: Position | null;
+	let selected: Position | null = null;
+	let is_promotion = true;
 	const handleFieldClick = (event: CustomEvent<Position | null>) => {
-		console.log(event);
-		selected = event.detail;
+		let new_selected = event.detail as Position;
+		console.log(new_selected);
+		if (selected === null) {
+			selected = new_selected;
+		} else {
+			if (selected[0] === new_selected[0] && selected[1] === new_selected[1]) {
+				selected = null;
+			} else {
+				// this is where a move would be created and done
+				current_player =
+					current_player == Player.White ? Player.Black : Player.White;
+				selected = null;
+			}
+		}
 	};
 </script>
 
-<table border="0">
-	<tbody>
-		{#each starting_position.toReversed().entries() as [row_index, row]}
+<div class="container">
+	<table border="0">
+		<tbody>
 			<tr>
-				<th scope="row">{rows[row_index]}</th>
-				{#each row.entries() as [col_index, piece]}
-					<Field
-						on:click={handleFieldClick}
-						is_black={(row_index + col_index) % 2 == 0}
-						piece_data={piece}
-						is_selected={selected
-							? selected[0] === row_index && selected[1] === col_index
-							: false}
-						position={[row_index, col_index]}
-					></Field>
+				<td></td>
+				{#each columns as column}
+					<th>{column}</th>
 				{/each}
 			</tr>
-		{/each}
-		<tr>
-			<td></td>
-			{#each columns as column}
-				<th>{column}</th>
+			{#each starting_position.toReversed().entries() as [row_index, row]}
+				<tr>
+					<th scope="row">{rows[row_index]}</th>
+					{#each row.entries() as [col_index, piece]}
+						<Field
+							on:click={handleFieldClick}
+							is_black={(row_index + col_index) % 2 == 0}
+							piece_data={piece}
+							is_selected={selected
+								? selected[0] === row_index && selected[1] === col_index
+								: false}
+							position={[row_index, col_index]}
+						></Field>
+					{/each}
+					<th scope="row">{rows[row_index]}</th>
+				</tr>
 			{/each}
-		</tr>
-	</tbody>
-</table>
-{#each promotion_types.entries() as [index, promotion_type] (index)}
-	<PromotionChoice
-		{promotion_type}
-		player={current_player}
-		is_black={index % 2 != 0}
-	/>
-{/each}
+			<tr>
+				<td></td>
+				{#each columns as column}
+					<th>{column}</th>
+				{/each}
+			</tr>
+		</tbody>
+	</table>
+	<div class="gap"></div>
+	{#if is_promotion}
+		<PromotionSelector player={current_player} />
+	{:else}
+		<div class="filler"></div>
+	{/if}
+</div>
+
+<style>
+	.container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+	.gap {
+		width: 90px;
+	}
+	.filler {
+		width: 90px;
+	}
+	table {
+		border-collapse: collapse;
+	}
+</style>
