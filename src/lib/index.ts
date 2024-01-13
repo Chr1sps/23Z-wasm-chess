@@ -1,4 +1,3 @@
-// place files you want to import through the `$lib` alias in this folder.
 import black_bishop from '$lib/assets/black_bishop.svg';
 import black_king from '$lib/assets/black_king.svg';
 import black_knight from '$lib/assets/black_knight.svg';
@@ -44,3 +43,5 @@ export const piece_map = {
 		[PieceType.King]: black_king
 	}
 };
+
+export type Position = [number, number];

@@ -1,15 +1,19 @@
 <script lang="ts">
 	// export let piece: PieceType | null;
-	import type { PieceData } from '$lib/index';
+	import type { PieceData, Position } from '$lib/index';
 	import { piece_map } from '$lib/index';
 	import { createEventDispatcher } from 'svelte';
 	export let is_black: boolean;
 	export let piece_data: PieceData | null = null;
 	export let is_selected = false;
-	const dispatcher = createEventDispatcher();
+	export let position: Position | null = null;
+	const dispatch = createEventDispatcher<{ click: null | Position }>();
+	const handleClick = () => {
+		dispatch('click', position);
+	};
 </script>
 
-<td class={is_black ? 'black_square' : 'white_square'}>
+<td class={is_black ? 'black_square' : 'white_square'} on:click={handleClick}>
 	{#if piece_data !== null}
 		{@const [player, piece_type] = piece_data}
 		<svg

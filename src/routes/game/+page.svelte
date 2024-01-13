@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PieceData } from '$lib/index';
+	import type { PieceData, Position } from '$lib/index';
 	import { PieceType, Player } from '$lib/index';
 	import Field from './Field.svelte';
 	import PromotionChoice from './PromotionChoice.svelte';
@@ -41,7 +41,11 @@
 		PieceType.Queen
 	];
 	let current_player = Player.White;
-	let selected: [number, number] | null;
+	let selected: Position | null;
+	const handleFieldClick = (event: CustomEvent<Position | null>) => {
+		console.log(event);
+		selected = event.detail;
+	};
 </script>
 
 <table border="0">
@@ -50,7 +54,14 @@
 			<tr>
 				<th scope="row">{rows[row_index]}</th>
 				{#each row.entries() as [col_index, piece]}
-					<Field is_black={(row_index + col_index) % 2 == 0} piece_data={piece}
+					<Field
+						on:click={handleFieldClick}
+						is_black={(row_index + col_index) % 2 == 0}
+						piece_data={piece}
+						is_selected={selected
+							? selected[0] === row_index && selected[1] === col_index
+							: false}
+						position={[row_index, col_index]}
 					></Field>
 				{/each}
 			</tr>
