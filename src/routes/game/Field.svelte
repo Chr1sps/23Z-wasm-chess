@@ -37,14 +37,14 @@
 		vertical-align: middle;
 	}
 	.black_square {
-		background-color: rgb(9, 43, 0);
+		background-color: #91b493;
 		height: 90px;
 		width: 90px;
 		position: relative;
 		place-items: center;
 	}
 	.white_square {
-		background-color: rgb(168, 211, 157);
+		background-color: #d3e3c9;
 		height: 90px;
 		width: 90px;
 		position: relative;

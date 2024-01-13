@@ -59,10 +59,11 @@
 	<table border="0">
 		<tbody>
 			<tr>
-				<td></td>
+				<td width="20" height="20" class="upper_left"></td>
 				{#each columns as column}
 					<th>{column}</th>
 				{/each}
+				<td width="20" height="20" class="upper_right"></td>
 			</tr>
 			{#each starting_position.toReversed().entries() as [row_index, row]}
 				<tr>
@@ -70,7 +71,7 @@
 					{#each row.entries() as [col_index, piece]}
 						<Field
 							on:click={handleFieldClick}
-							is_black={(row_index + col_index) % 2 == 0}
+							is_black={(row_index + col_index) % 2 !== 0}
 							piece_data={piece}
 							is_selected={selected
 								? selected[0] === row_index && selected[1] === col_index
@@ -82,10 +83,11 @@
 				</tr>
 			{/each}
 			<tr>
-				<td></td>
+				<td class="lower_left"></td>
 				{#each columns as column}
 					<th>{column}</th>
 				{/each}
+				<td class="lower_right"></td>
 			</tr>
 		</tbody>
 	</table>
@@ -111,5 +113,22 @@
 	}
 	table {
 		border-collapse: collapse;
+	}
+	td,
+	th {
+		background-color: #5e724e;
+		color: white;
+	}
+	.upper_left {
+		border-radius: 50% 0 0 0;
+	}
+	.upper_right {
+		border-radius: 0 50% 0 0;
+	}
+	.lower_left {
+		border-radius: 0 0 0 50%;
+	}
+	.lower_right {
+		border-radius: 0 0 50% 0;
 	}
 </style>
