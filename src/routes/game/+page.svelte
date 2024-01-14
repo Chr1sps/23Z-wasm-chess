@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { PieceData, Position } from '$lib/index';
 	import { PieceType, Player } from '$lib/index';
+	import { onMount } from 'svelte';
+	import init, * as wasm from 'wasm-chess';
 	import Field from './Field.svelte';
 	import PromotionSelector from './PromotionSelector.svelte';
 
@@ -37,22 +39,42 @@
 	let current_player = Player.White;
 	let selected: Position | null = null;
 	let is_promotion = true;
+	let game: wasm.Game;
+	let possible_moves: Array<wasm.Position> = [];
 	const handleFieldClick = (event: CustomEvent<Position | null>) => {
 		let new_selected = event.detail as Position;
+		let [row, col] = new_selected;
+
 		console.log(new_selected);
 		if (selected === null) {
 			selected = new_selected;
+			possible_moves = game.get_moves(
+				wasm.Position.new(row, col) as wasm.Position
+			);
 		} else {
 			if (selected[0] === new_selected[0] && selected[1] === new_selected[1]) {
-				selected = null;
+				//
 			} else {
-				// this is where a move would be created and done
-				current_player =
-					current_player == Player.White ? Player.Black : Player.White;
-				selected = null;
+				let from = wasm.Position.new(row, col) as wasm.Position;
+				let to = wasm.Position.new(row, col) as wasm.Position;
+				let move = wasm.ChessMove.new(from, to);
+				if (game.is_promotion_move(move)) {
+					// promotion_type = wasm.PromotionType.Queen;
+				}
+				try {
+					game.make_move(move);
+					current_player =
+						current_player == Player.White ? Player.Black : Player.White;
+				} catch (error) {}
 			}
+			selected = null;
+			possible_moves = [];
 		}
 	};
+	onMount(async () => {
+		await init();
+		game = wasm.Game.new();
+	});
 </script>
 
 <div class="container">

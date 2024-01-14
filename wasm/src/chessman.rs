@@ -21,6 +21,16 @@ impl ChessMove {
     }
 }
 
+#[wasm_bindgen]
+impl ChessMove {
+    pub fn new(from: Position, to: Position) -> ChessMove {
+        Self {
+            current_position: from,
+            end_position: to,
+        }
+    }
+}
+
 pub struct ChessPiece {
     position: Position,
     player: PlayerKind,

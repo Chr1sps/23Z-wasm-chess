@@ -1,16 +1,6 @@
 use crate::{ChessField, ChessMove, Player};
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone)]
-pub enum PromotionType {
-    Queen,
-    Rook,
-    Bishop,
-    Knight,
-}
-
 pub struct GameState {
     board: Vec<Vec<ChessField>>,
     current_player: Player,
@@ -21,6 +11,7 @@ impl GameState {
         r#move: ChessMove,
         promotion: Option<PromotionType>,
     ) -> Option<Self> {
+        None
     }
     pub fn first_state() -> Self {}
 
@@ -29,7 +20,7 @@ impl GameState {
         for column in self.board {
             for field in column {
                 if let Some(piece) = field.get_status() {
-                    result.append(&mut piece.get_moves(&self));
+                    result.append(&mut piece.get_moves());
                 }
             }
         }

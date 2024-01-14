@@ -5,16 +5,17 @@ pub use position::PlayerKind;
 pub use position::Position;
 use std::mem;
 use std::ops::Not;
+use std::vec;
 use wasm_bindgen::prelude::*;
+
+use crate::player::Player;
 
 pub mod chessman;
 pub mod field;
 // mod gamestate;
-mod player;
+pub mod player;
 pub mod position;
 
-#[wasm_bindgen]
-#[repr(u8)]
 #[derive(Clone, Copy)]
 pub enum Status {
     Check,
@@ -23,23 +24,24 @@ pub enum Status {
 }
 
 #[wasm_bindgen]
+#[repr(u8)]
+#[derive(Clone)]
+pub enum PromotionType {
+    Queen,
+    Rook,
+    Bishop,
+    Knight,
+}
+
+#[wasm_bindgen]
 pub struct Game {
     current_player: PlayerKind,
     other_player: PlayerKind,
-    pub status: Status,
+    status: Status,
     chessboard: Vec<Vec<ChessField>>,
 }
 
 impl Game {
-    pub fn new() -> Self {
-        Self {
-            current_player: PlayerKind::White,
-            other_player: PlayerKind::Black,
-            status: Status::Normal,
-            chessboard: Game::init_board(),
-        }
-    }
-
     pub fn get_game_status(&self) -> &Status {
         &self.status
     }
@@ -73,7 +75,7 @@ impl Game {
         chessboard
     }
 
-    pub fn make_move(&self, position: Position) -> Result<Vec<ChessMove>, String> {
+    pub fn r#move(&self, position: Position) -> Result<Vec<ChessMove>, String> {
         let (row, column) = position.to_tuple();
         let mut filtered_results: Vec<ChessMove> = vec![];
         let chessfield: &ChessField = self.get_field(row, column);
@@ -203,6 +205,46 @@ impl Game {
     }
 }
 
+#[wasm_bindgen]
+impl Game {
+    pub fn new() -> Self {
+        Self {
+            current_player: PlayerKind::White,
+            other_player: PlayerKind::Black,
+            status: Status::Normal,
+            chessboard: Game::init_board(),
+        }
+    }
+    /// Returns a list of possible positions that a piece on a given square can
+    /// get to within a move.
+    pub fn get_moves(&self, pos: Position) -> Vec<Position> {
+        vec![]
+    }
+    /// Returns true if the game has finished.
+    pub fn is_finished(&self) -> bool {
+        false
+    }
+    /// Returns true if the move would result in a promotion of a pawn.
+    pub fn is_promotion_move(&self, chess_move: ChessMove) -> bool {
+        false
+    }
+    /// Tries to make a move; returns Ok(()) if the move was successful,
+    /// Err(String) otherwise.
+    pub fn make_move(
+        &mut self,
+        chess_move: ChessMove,
+        promotion_type: Option<PromotionType>,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    /// Returns Some(Player) if a game has resulted in a win for a given player,
+    /// None otherwise.
+    pub fn get_winner(&self) -> Option<Player> {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::chessman::{Bishop, King, Knight, Pawn, Queen, Rook};
@@ -225,7 +267,7 @@ mod tests {
             (4, 4),
             Rook::new(Position::new(4, 4).unwrap(), PlayerKind::White),
         );
-        let result = game.make_move(Position::new(4, 4).unwrap());
+        let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 14);
     }
 
@@ -236,7 +278,7 @@ mod tests {
             (4, 4),
             Queen::new(Position::new(4, 4).unwrap(), PlayerKind::White),
         );
-        let result = game.make_move(Position::new(4, 4).unwrap());
+        let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 27);
     }
 
@@ -247,7 +289,7 @@ mod tests {
             (4, 4),
             King::new(Position::new(4, 4).unwrap(), PlayerKind::White),
         );
-        let result = game.make_move(Position::new(4, 4).unwrap());
+        let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 8);
     }
 
@@ -258,7 +300,7 @@ mod tests {
             (4, 4),
             Bishop::new(Position::new(4, 4).unwrap(), PlayerKind::White),
         );
-        let result = game.make_move(Position::new(4, 4).unwrap());
+        let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 13);
     }
 
@@ -269,7 +311,7 @@ mod tests {
             (4, 4),
             Knight::new(Position::new(4, 4).unwrap(), PlayerKind::White),
         );
-        let result = game.make_move(Position::new(4, 4).unwrap());
+        let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 8);
     }
 
