@@ -1,13 +1,5 @@
 use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
-#[repr(u8)]
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum PlayerKind {
-    Black,
-    White,
-}
-
-#[wasm_bindgen]
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
     row: u8,

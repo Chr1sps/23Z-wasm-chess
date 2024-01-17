@@ -1,43 +1,29 @@
-pub use crate::position::PlayerKind;
+use crate::gamestate::GameState;
+pub use crate::player::Player;
 pub use crate::position::Position;
+pub use crate::r#move::Move;
 use core::any::Any;
 use itertools::iproduct;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy)]
-pub struct ChessMove {
-    current_position: Position,
-    end_position: Position,
+#[repr(u8)]
+#[derive(Clone)]
+pub enum PieceType {
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King,
 }
-
-impl ChessMove {
-    pub fn get_end_position(&self) -> Position {
-        self.end_position
-    }
-
-    pub fn get_current_position(&self) -> Position {
-        self.current_position
-    }
-}
-
-#[wasm_bindgen]
-impl ChessMove {
-    pub fn new(from: Position, to: Position) -> ChessMove {
-        Self {
-            current_position: from,
-            end_position: to,
-        }
-    }
-}
-
 pub struct ChessPiece {
     position: Position,
-    player: PlayerKind,
+    player: Player,
 }
 
 impl ChessPiece {
-    pub fn new(new_position: Position, new_player: PlayerKind) -> ChessPiece {
+    pub fn new(new_position: Position, new_player: Player) -> ChessPiece {
         ChessPiece {
             position: new_position,
             player: new_player,
@@ -46,12 +32,8 @@ impl ChessPiece {
 }
 
 pub trait ChessPieceTrait: Any {
-    fn is_first_move(&self) -> bool {
-        false
-    }
-
-    fn get_moves_lines(&self, directions: Vec<(i32, i32)>) -> Vec<ChessMove> {
-        let mut results: Vec<ChessMove> = vec![];
+    fn get_moves_lines(&self, directions: Vec<(i32, i32)>) -> Vec<Move> {
+        let mut results: Vec<Move> = vec![];
         for (dir_column, dir_row) in directions {
             for distance in 1..8 {
                 let new_column =
@@ -66,8 +48,8 @@ pub trait ChessPieceTrait: Any {
         results
     }
 
-    fn get_moves_shifts(&self, shifts: Vec<(i32, i32)>) -> Vec<ChessMove> {
-        let mut result: Vec<ChessMove> = vec![];
+    fn get_moves_shifts(&self, shifts: Vec<(i32, i32)>) -> Vec<Move> {
+        let mut result: Vec<Move> = vec![];
         for (column_shift, row_shift) in shifts {
             let new_column = (self.get_position().get_column() as i32 + column_shift) as u8;
             let new_row = (self.get_position().get_row() as i32 + row_shift) as u8;
@@ -78,12 +60,9 @@ pub trait ChessPieceTrait: Any {
         result
     }
 
-    fn create_move(&self, new_column: u8, new_row: u8) -> Option<ChessMove> {
+    fn create_move(&self, new_column: u8, new_row: u8) -> Option<Move> {
         if let Some(end_position) = Position::new(new_row, new_column) {
-            Some(ChessMove {
-                current_position: self.get_position(),
-                end_position,
-            })
+            Some(Move::new(self.get_position(), end_position))
         } else {
             None
         }
@@ -97,9 +76,9 @@ pub trait ChessPieceTrait: Any {
         params
     }
 
-    fn get_moves(&self) -> Vec<ChessMove>;
+    fn get_moves(&self, state: &GameState) -> Vec<Move>;
 
-    fn get_player(&self) -> PlayerKind;
+    fn get_player(&self) -> Player;
 
     fn get_position(&self) -> Position;
 }
@@ -112,7 +91,11 @@ pub struct Pawn {
 }
 
 impl Pawn {
-    pub fn new(position: Position, player: PlayerKind) -> Pawn {
+    fn is_first_move(&self) -> bool {
+        self.first_move
+    }
+
+    pub fn new(position: Position, player: Player) -> Pawn {
         Pawn {
             chessman: ChessPiece::new(position, player),
             first_move: true,
@@ -122,16 +105,12 @@ impl Pawn {
 }
 
 impl ChessPieceTrait for Pawn {
-    fn get_moves(&self) -> Vec<ChessMove> {
-        let result: Vec<ChessMove> = vec![];
+    fn get_moves(&self) -> Vec<Move> {
+        let result: Vec<Move> = vec![];
         result
     }
 
-    fn is_first_move(&self) -> bool {
-        self.first_move
-    }
-
-    fn get_player(&self) -> PlayerKind {
+    fn get_player(&self) -> Player {
         self.chessman.player
     }
 
@@ -145,7 +124,7 @@ pub struct Rook {
 }
 
 impl Rook {
-    pub fn new(position: Position, player: PlayerKind) -> Rook {
+    pub fn new(position: Position, player: Player) -> Rook {
         Rook {
             chessman: ChessPiece::new(position, player),
         }
@@ -153,12 +132,12 @@ impl Rook {
 }
 
 impl ChessPieceTrait for Rook {
-    fn get_moves(&self) -> Vec<ChessMove> {
+    fn get_moves(&self) -> Vec<Move> {
         let directions: Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
         self.get_moves_lines(directions)
     }
 
-    fn get_player(&self) -> PlayerKind {
+    fn get_player(&self) -> Player {
         self.chessman.player
     }
 
@@ -172,7 +151,7 @@ pub struct King {
 }
 
 impl King {
-    pub fn new(position: Position, player: PlayerKind) -> King {
+    pub fn new(position: Position, player: Player) -> King {
         King {
             chessman: ChessPiece::new(position, player),
         }
@@ -180,12 +159,12 @@ impl King {
 }
 
 impl ChessPieceTrait for King {
-    fn get_moves(&self) -> Vec<ChessMove> {
+    fn get_moves(&self) -> Vec<Move> {
         let possible_shifts: Vec<(i32, i32)> = self.calculate_params();
         self.get_moves_shifts(possible_shifts)
     }
 
-    fn get_player(&self) -> PlayerKind {
+    fn get_player(&self) -> Player {
         self.chessman.player
     }
 
@@ -199,7 +178,7 @@ pub struct Queen {
 }
 
 impl Queen {
-    pub fn new(position: Position, player: PlayerKind) -> Queen {
+    pub fn new(position: Position, player: Player) -> Queen {
         Queen {
             chessman: ChessPiece::new(position, player),
         }
@@ -207,12 +186,12 @@ impl Queen {
 }
 
 impl ChessPieceTrait for Queen {
-    fn get_moves(&self) -> Vec<ChessMove> {
+    fn get_moves(&self) -> Vec<Move> {
         let directions: Vec<(i32, i32)> = self.calculate_params();
         return self.get_moves_lines(directions);
     }
 
-    fn get_player(&self) -> PlayerKind {
+    fn get_player(&self) -> Player {
         self.chessman.player
     }
 
@@ -225,7 +204,7 @@ pub struct Bishop {
     chessman: ChessPiece,
 }
 impl Bishop {
-    pub fn new(position: Position, player: PlayerKind) -> Bishop {
+    pub fn new(position: Position, player: Player) -> Bishop {
         Bishop {
             chessman: ChessPiece::new(position, player),
         }
@@ -233,13 +212,13 @@ impl Bishop {
 }
 
 impl ChessPieceTrait for Bishop {
-    fn get_moves(&self) -> Vec<ChessMove> {
+    fn get_moves(&self) -> Vec<Move> {
         let a = vec![-1, 1];
         let b = vec![-1, 1];
         return self.get_moves_lines(iproduct!(a, b).collect());
     }
 
-    fn get_player(&self) -> PlayerKind {
+    fn get_player(&self) -> Player {
         self.chessman.player
     }
 
@@ -253,7 +232,7 @@ pub struct Knight {
 }
 
 impl Knight {
-    pub fn new(position: Position, player: PlayerKind) -> Knight {
+    pub fn new(position: Position, player: Player) -> Knight {
         Knight {
             chessman: ChessPiece::new(position, player),
         }
@@ -261,7 +240,7 @@ impl Knight {
 }
 
 impl ChessPieceTrait for Knight {
-    fn get_moves(&self) -> Vec<ChessMove> {
+    fn get_moves(&self) -> Vec<Move> {
         let possible_shifts: Vec<(i32, i32)> = self.calculate_params();
         return self.get_moves_shifts(possible_shifts);
     }
@@ -274,7 +253,7 @@ impl ChessPieceTrait for Knight {
         possible_shifts
     }
 
-    fn get_player(&self) -> PlayerKind {
+    fn get_player(&self) -> Player {
         self.chessman.player
     }
 

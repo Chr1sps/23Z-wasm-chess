@@ -5,23 +5,6 @@ use core::any::Any;
 use itertools::iproduct;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-#[derive(Debug, Clone, Copy)]
-pub struct ChessMove {
-    current_position: Position,
-    end_position: Position,
-}
-
-impl ChessMove {
-    pub fn get_end_position(&self) -> Position {
-        self.end_position
-    }
-
-    pub fn get_current_position(&self) -> Position {
-        self.current_position
-    }
-}
-
 pub struct ChessPiece {
     position: Position,
     player: Player,

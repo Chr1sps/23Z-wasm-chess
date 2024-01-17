@@ -1,8 +1,7 @@
-pub use chessman::ChessMove;
 pub use chessman::ChessPieceTrait;
 pub use field::ChessField;
-pub use position::PlayerKind;
 pub use position::Position;
+pub use r#move::Move;
 use std::mem;
 use std::ops::Not;
 use std::vec;
@@ -12,7 +11,8 @@ use crate::player::Player;
 
 pub mod chessman;
 pub mod field;
-// mod gamestate;
+mod gamestate;
+pub mod r#move;
 pub mod player;
 pub mod position;
 
@@ -35,8 +35,8 @@ pub enum PromotionType {
 
 #[wasm_bindgen]
 pub struct Game {
-    current_player: PlayerKind,
-    other_player: PlayerKind,
+    current_player: Player,
+    other_player: Player,
     status: Status,
     chessboard: Vec<Vec<ChessField>>,
 }
@@ -50,11 +50,11 @@ impl Game {
         self.status = new_status;
     }
 
-    pub fn get_current_player(&self) -> PlayerKind {
+    pub fn get_current_player(&self) -> Player {
         self.current_player
     }
 
-    pub fn get_other_player(&self) -> PlayerKind {
+    pub fn get_other_player(&self) -> Player {
         self.other_player
     }
 
@@ -75,21 +75,21 @@ impl Game {
         chessboard
     }
 
-    pub fn r#move(&self, position: Position) -> Result<Vec<ChessMove>, String> {
+    pub fn r#move(&self, position: Position) -> Result<Vec<Move>, String> {
         let (row, column) = position.to_tuple();
-        let mut filtered_results: Vec<ChessMove> = vec![];
+        let mut filtered_results: Vec<Move> = vec![];
         let chessfield: &ChessField = self.get_field(row, column);
-        match chessfield.get_status() {
+        match chessfield.get_piece() {
             None => Err("You must select field with chesspiece".to_string()),
             Some(chessman) => {
-                let results: Vec<ChessMove> = chessman.get_moves();
+                let results: Vec<Move> = chessman.get_moves(&self);
                 for result in results {
                     let end_pos = result.get_end_position();
                     let possible_field: &ChessField =
                         self.get_field(end_pos.get_row(), end_pos.get_column());
-                    if (possible_field.get_status().is_some()
+                    if (possible_field.get_piece().is_some()
                         && chessman.get_player()
-                            == possible_field.get_status().as_ref().unwrap().get_player())
+                            == possible_field.get_piece().as_ref().unwrap().get_player())
                     .not()
                     {
                         filtered_results.push(result);
@@ -102,13 +102,13 @@ impl Game {
         }
     }
 
-    pub fn make_pawn_move(&self, start_position: Position) -> Result<Vec<ChessMove>, String> {
-        let mut results: Vec<ChessMove> = vec![];
+    pub fn make_pawn_move(&self, start_position: Position) -> Result<Vec<Move>, String> {
+        let mut results: Vec<Move> = vec![];
 
         let (row, column) = start_position.to_tuple();
         let right_column = column + 1;
         let left_column = row - 1;
-        let row_shift: i32 = if self.get_current_player() == PlayerKind::White {
+        let row_shift: i32 = if self.get_current_player() == Player::White {
             1
         } else {
             -1
@@ -118,29 +118,29 @@ impl Game {
 
         if self
             .get_field((row as i32 + row_shift) as u8, column)
-            .get_status()
+            .get_piece()
             .is_none()
         {
             let chessmove = chessfield
-                .get_status()
+                .get_piece()
                 .as_ref()
                 .unwrap()
                 .create_move(column, (row as i32 + row_shift) as u8);
             results.push(chessmove.unwrap());
         }
 
-        if chessfield.get_status().as_ref().unwrap().is_first_move()
+        if chessfield.get_piece().as_ref().unwrap().is_first_move()
             && self
                 .get_field((row as i32 + row_shift) as u8, column)
-                .get_status()
+                .get_piece()
                 .is_none()
             && self
                 .get_field((row as i32 + 2 * row_shift) as u8, column)
-                .get_status()
+                .get_piece()
                 .is_none()
         {
             let chessmove = chessfield
-                .get_status()
+                .get_piece()
                 .as_ref()
                 .unwrap()
                 .create_move(column, (row as i32 + 2 * row_shift) as u8);
@@ -150,12 +150,12 @@ impl Game {
         if (0..8 as u8).contains(&right_column) {
             let right_diagonal = self
                 .get_field((row as i32 + row_shift) as u8, right_column)
-                .get_status();
+                .get_piece();
             if right_diagonal.is_some()
                 && right_diagonal.as_ref().unwrap().get_player() != self.get_current_player()
             {
                 let chessmove = chessfield
-                    .get_status()
+                    .get_piece()
                     .as_ref()
                     .unwrap()
                     .create_move(right_column, (row as i32 + row_shift) as u8);
@@ -167,12 +167,12 @@ impl Game {
         if (0..8 as u8).contains(&left_column) {
             let left_diagonal = self
                 .get_field((row as i32 + row_shift) as u8, left_column)
-                .get_status();
+                .get_piece();
             if left_diagonal.is_some()
                 && left_diagonal.as_ref().unwrap().get_player() != self.get_current_player()
             {
                 let chessmove = chessfield
-                    .get_status()
+                    .get_piece()
                     .as_ref()
                     .unwrap()
                     .create_move(left_column, (row as i32 + row_shift) as u8);
@@ -194,7 +194,7 @@ impl Game {
             .get_mut(row_i)
             .and_then(|row| row.get_mut(column_i))
         {
-            field.set_status(Some(Box::new(chesspiece)));
+            field.set_piece(Some(Box::new(chesspiece)));
         }
     }
 
@@ -209,8 +209,8 @@ impl Game {
 impl Game {
     pub fn new() -> Self {
         Self {
-            current_player: PlayerKind::White,
-            other_player: PlayerKind::Black,
+            current_player: Player::White,
+            other_player: Player::Black,
             status: Status::Normal,
             chessboard: Game::init_board(),
         }
@@ -225,14 +225,14 @@ impl Game {
         false
     }
     /// Returns true if the move would result in a promotion of a pawn.
-    pub fn is_promotion_move(&self, chess_move: ChessMove) -> bool {
+    pub fn is_promotion_move(&self, chess_move: Move) -> bool {
         false
     }
     /// Tries to make a move; returns Ok(()) if the move was successful,
     /// Err(String) otherwise.
     pub fn make_move(
         &mut self,
-        chess_move: ChessMove,
+        chess_move: Move,
         promotion_type: Option<PromotionType>,
     ) -> Result<(), String> {
         Ok(())
@@ -256,8 +256,8 @@ mod tests {
     fn test_change_round() {
         let mut game = Game::new();
         game.change_round();
-        assert_eq!(game.get_current_player(), PlayerKind::Black);
-        assert_eq!(game.get_other_player(), PlayerKind::White);
+        assert_eq!(game.get_current_player(), Player::Black);
+        assert_eq!(game.get_other_player(), Player::White);
     }
 
     #[test]
@@ -265,7 +265,7 @@ mod tests {
         let mut game = Game::new();
         game.set_field(
             (4, 4),
-            Rook::new(Position::new(4, 4).unwrap(), PlayerKind::White),
+            Rook::new(Position::new(4, 4).unwrap(), Player::White),
         );
         let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 14);
@@ -276,7 +276,7 @@ mod tests {
         let mut game = Game::new();
         game.set_field(
             (4, 4),
-            Queen::new(Position::new(4, 4).unwrap(), PlayerKind::White),
+            Queen::new(Position::new(4, 4).unwrap(), Player::White),
         );
         let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 27);
@@ -287,7 +287,7 @@ mod tests {
         let mut game = Game::new();
         game.set_field(
             (4, 4),
-            King::new(Position::new(4, 4).unwrap(), PlayerKind::White),
+            King::new(Position::new(4, 4).unwrap(), Player::White),
         );
         let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 8);
@@ -298,7 +298,7 @@ mod tests {
         let mut game = Game::new();
         game.set_field(
             (4, 4),
-            Bishop::new(Position::new(4, 4).unwrap(), PlayerKind::White),
+            Bishop::new(Position::new(4, 4).unwrap(), Player::White),
         );
         let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 13);
@@ -309,7 +309,7 @@ mod tests {
         let mut game = Game::new();
         game.set_field(
             (4, 4),
-            Knight::new(Position::new(4, 4).unwrap(), PlayerKind::White),
+            Knight::new(Position::new(4, 4).unwrap(), Player::White),
         );
         let result = game.r#move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 8);
@@ -320,7 +320,7 @@ mod tests {
         let mut game = Game::new();
         game.set_field(
             (4, 4),
-            Pawn::new(Position::new(4, 4).unwrap(), PlayerKind::White),
+            Pawn::new(Position::new(4, 4).unwrap(), Player::White),
         );
         let result = game.make_pawn_move(Position::new(4, 4).unwrap());
         assert_eq!(result.unwrap().len(), 2);

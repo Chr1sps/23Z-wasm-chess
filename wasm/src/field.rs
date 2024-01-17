@@ -14,11 +14,11 @@ impl ChessField {
         }
     }
 
-    pub fn get_status(&self) -> &Option<Box<dyn ChessPieceTrait>> {
+    pub fn get_piece(&self) -> &Option<Box<dyn ChessPieceTrait>> {
         &self.status
     }
 
-    pub fn set_status(&mut self, status: Option<Box<dyn ChessPieceTrait>>) {
+    pub fn set_piece(&mut self, status: Option<Box<dyn ChessPieceTrait>>) {
         self.status = status;
     }
     pub fn get_position(&self) -> &Position {
