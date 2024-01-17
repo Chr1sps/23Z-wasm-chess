@@ -6,12 +6,14 @@ pub struct GameState {
     current_player: Player,
 }
 impl GameState {
+    /// Generates the next state that would be the result of a given move and a
+    /// given promotion.
     pub fn generate_next_state(
-        old_state: &GameState,
+        old_state: GameState,
         r#move: Move,
         promotion: Option<PromotionType>,
-    ) -> Option<Self> {
-        None
+    ) -> Self {
+        unimplemented!()
     }
     /// Creates an initial chessboard state.
     pub fn init() -> Self {
@@ -125,7 +127,7 @@ impl GameState {
     }
 
     /// Returns all the moves that can be made by the current player.
-    pub fn get_moves(&self) -> Vec<Move> {
+    pub fn get_all_moves(&self) -> Vec<Move> {
         let mut result = vec![];
         for field in self.board.iter().flatten() {
             if let Some(piece) = field {
@@ -137,28 +139,54 @@ impl GameState {
         result
     }
 
-    pub fn check_promotion_move(&self, r#move: Move) -> bool {
-        let (column, row) = r#move.get_current_position().to_tuple();
-        let field = self.board[column as usize][row as usize];
-        match field {
-            Some(piece) => true,
-            None => false,
+    /// Returns all the moves that can be made by a piece on a given position
+    /// (returns an empty vector if there is no piece there).
+    pub fn get_moves(&self, position: Position) -> Vec<Move> {
+        let (row, col) = position.to_tuple();
+        match &self.board[row as usize][col as usize] {
+            Some(piece) => piece.get_moves(&self),
+            None => vec![],
         }
     }
 
+    /// Returns true if the current state indicates that the game has finished.
     pub fn is_finished(&self) -> bool {
-        self.get_moves().is_empty()
+        self.get_all_moves().is_empty()
     }
 
+    /// If a match has resulted in a win, returns the winning player. Otherwise
+    /// returns None.
     pub fn get_winner(&self) -> Option<Player> {
         unimplemented!()
     }
+    /// Returns a reference to a piece if it exists there, otherwise returns
+    /// None.
     pub fn get_piece(&self, position: Position) -> Option<&Piece> {
         let (row, col) = position.to_tuple();
-        if let Some(piece) = self.board[row as usize][col as usize] {
-            Some(&piece)
+        if let Some(piece) = &self.board[row as usize][col as usize] {
+            Some(piece)
         } else {
             None
+        }
+    }
+    /// Returns true if a given position resides on the last row from the
+    /// perspective of the current player.
+    fn is_end_row(&self, position: Position) -> bool {
+        let end_row = if self.current_player == Player::White {
+            7 as u8
+        } else {
+            0 as u8
+        };
+        position.get_row() == end_row
+    }
+    /// Returns true if a move would result in a promotion of a pawn.
+    pub fn is_promotion_move(&self, r#move: Move) -> bool {
+        let (end_row, col) = r#move.get_end_position().to_tuple();
+        let moved_piece = &self.board[end_row as usize][col as usize];
+        if let Some(Piece::Pawn(_, _, _)) = moved_piece {
+            self.is_end_row(r#move.get_end_position())
+        } else {
+            false
         }
     }
 }

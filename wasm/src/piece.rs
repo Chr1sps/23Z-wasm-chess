@@ -76,7 +76,7 @@ impl Piece {
 
     /// Returns the piece's player.
     pub fn get_player(&self) -> Player {
-        match *self {
+        match self {
             Self::Pawn(data, _, _)
             | Self::Knight(data)
             | Self::Bishop(data)
@@ -88,7 +88,7 @@ impl Piece {
 
     /// Returns the piece's position.
     pub fn get_position(&self) -> Position {
-        match *self {
+        match self {
             Self::Pawn(data, _, _)
             | Self::Knight(data)
             | Self::Bishop(data)
@@ -99,7 +99,7 @@ impl Piece {
     }
 
     /// Returns a PieceType value according to the piece's type.
-    pub fn get_piece_type(&self) -> PieceType {
+    pub fn get_type(&self) -> PieceType {
         match *self {
             Self::Pawn(_, _, _) => PieceType::Pawn,
             Self::Knight(_) => PieceType::Knight,
@@ -173,44 +173,33 @@ impl Piece {
         result
     }
     /// Returns a vector of moves possible to make for a given piece given a
-    /// game state object. This function takes into account things such as
+    /// game state object. The resulting moves are guaranteed to be legal
+    /// according to the rules of the game.
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
         let result = vec![];
         match *self {
-            Self::Pawn(PieceData { position, player }, first_move, is_en_passantable) => {}
+            Self::Pawn(_, first_move, is_en_passantable) => {}
             Self::Knight(PieceData {
-                position,
+                position: _,
                 player: _,
             }) => {
                 let mut possible_shifts = iproduct!([-2, 2], [-1, 1]).collect_vec();
                 possible_shifts.extend(iproduct!([-1, 1], [-2, 2]));
                 return self.get_moves_shifts(possible_shifts, state);
             }
-            Self::Bishop(PieceData {
-                position,
-                player: _,
-            }) => {
+            Self::Bishop(_) => {
                 let directions = iproduct!([1, -1], [1, -1]).collect_vec();
                 return self.get_moves_lines(directions, state);
             }
-            Self::Rook(
-                PieceData {
-                    position,
-                    player: _,
-                },
-                can_castle,
-            ) => {
+            Self::Rook(_, can_castle) => {
                 let directions = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
                 return self.get_moves_lines(directions, state);
             }
-            Self::Queen(PieceData {
-                position,
-                player: _,
-            }) => {
+            Self::Queen(_) => {
                 let directions = iproduct!([1, 0, -1], [1, 0, -1]).collect_vec();
                 return self.get_moves_lines(directions, state);
             }
-            Self::King(PieceData { position, player }, can_castle) => {}
+            Self::King(_, can_castle) => {}
         };
         result
     }
