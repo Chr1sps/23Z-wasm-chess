@@ -2,7 +2,6 @@ use crate::gamestate::GameState;
 pub use crate::player::Player;
 pub use crate::position::Position;
 pub use crate::r#move::Move;
-use core::any::Any;
 use itertools::{iproduct, Itertools};
 use wasm_bindgen::prelude::*;
 
@@ -173,13 +172,6 @@ impl Piece {
         }
         result
     }
-    fn calculate_directions() -> Vec<(i32, i32)> {
-        let a = vec![1, 0, -1];
-        let b = vec![1, 0, -1];
-        let mut params: Vec<(i32, i32)> = iproduct!(a, b).collect();
-        params.retain(|&x| x != (0, 0));
-        params
-    }
     /// Returns a vector of moves possible to make for a given piece given a
     /// game state object. This function takes into account things such as
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
@@ -208,7 +200,7 @@ impl Piece {
                 },
                 can_castle,
             ) => {
-                let directions: Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
+                let directions = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
                 return self.get_moves_lines(directions, state);
             }
             Self::Queen(PieceData {

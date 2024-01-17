@@ -1,18 +1,16 @@
-pub use chessman::ChessPieceTrait;
-pub use field::ChessField;
+use gamestate::GameState;
+pub use piece::Piece;
 pub use position::Position;
 pub use r#move::Move;
-use std::mem;
 use std::ops::Not;
 use std::vec;
 use wasm_bindgen::prelude::*;
 
 use crate::player::Player;
 
-pub mod chessman;
-pub mod field;
 mod gamestate;
 pub mod r#move;
+pub mod piece;
 pub mod player;
 pub mod position;
 
@@ -35,197 +33,142 @@ pub enum PromotionType {
 
 #[wasm_bindgen]
 pub struct Game {
-    current_player: Player,
-    other_player: Player,
-    status: Status,
-    chessboard: Vec<Vec<ChessField>>,
+    state: GameState,
 }
 
 impl Game {
-    pub fn get_game_status(&self) -> &Status {
-        &self.status
-    }
+    fn new() -> Self {}
 
-    pub fn set_game_status(&mut self, new_status: Status) {
-        self.status = new_status;
-    }
+    // pub fn r#move(&self, position: Position) -> Result<Vec<Move>, String> {
+    //     let (row, column) = position.to_tuple();
+    //     let mut filtered_results: Vec<Move> = vec![];
+    //     let chessfield: &Field = self.get_field(row, column);
+    //     match chessfield.get_piece() {
+    //         None => Err("You must select field with chesspiece".to_string()),
+    //         Some(chessman) => {
+    //             let results: Vec<Move> = chessman.get_moves(&self);
+    //             for result in results {
+    //                 let end_pos = result.get_end_position();
+    //                 let possible_field: &Field =
+    //                     self.get_field(end_pos.get_row(), end_pos.get_column());
+    //                 if (possible_field.get_piece().is_some()
+    //                     && chessman.get_player()
+    //                         == possible_field.get_piece().as_ref().unwrap().get_player())
+    //                 .not()
+    //                 {
+    //                     filtered_results.push(result);
+    //                 }
+    //             }
+    //             println!("{:#?}", filtered_results);
+    //             println!("{}", filtered_results.len());
+    //             Ok(filtered_results)
+    //         }
+    //     }
+    // }
 
-    pub fn get_current_player(&self) -> Player {
-        self.current_player
-    }
+    // pub fn make_pawn_move(&self, start_position: Position) -> Result<Vec<Move>, String> {
+    //     let mut results: Vec<Move> = vec![];
 
-    pub fn get_other_player(&self) -> Player {
-        self.other_player
-    }
+    //     let (row, column) = start_position.to_tuple();
+    //     let right_column = column + 1;
+    //     let left_column = row - 1;
+    //     let row_shift: i32 = if self.get_current_player() == Player::White {
+    //         1
+    //     } else {
+    //         -1
+    //     };
 
-    pub fn change_round(&mut self) {
-        mem::swap(&mut self.current_player, &mut self.other_player)
-    }
+    //     let chessfield: &Field = self.get_field(row, column);
 
-    fn init_board() -> Vec<Vec<ChessField>> {
-        let mut chessboard: Vec<Vec<ChessField>> = Vec::with_capacity(8);
+    //     if self
+    //         .get_field((row as i32 + row_shift) as u8, column)
+    //         .get_piece()
+    //         .is_none()
+    //     {
+    //         let chessmove = chessfield
+    //             .get_piece()
+    //             .as_ref()
+    //             .unwrap()
+    //             .create_move(column, (row as i32 + row_shift) as u8);
+    //         results.push(chessmove.unwrap());
+    //     }
 
-        for i in 0..8 {
-            let mut row: Vec<ChessField> = Vec::with_capacity(8);
-            for j in 0..8 {
-                row.push(ChessField::new(Position::new(i, j).unwrap()));
-            }
-            chessboard.push(row);
-        }
-        chessboard
-    }
+    //     if chessfield.get_piece().as_ref().unwrap().is_first_move()
+    //         && self
+    //             .get_field((row as i32 + row_shift) as u8, column)
+    //             .get_piece()
+    //             .is_none()
+    //         && self
+    //             .get_field((row as i32 + 2 * row_shift) as u8, column)
+    //             .get_piece()
+    //             .is_none()
+    //     {
+    //         let chessmove = chessfield
+    //             .get_piece()
+    //             .as_ref()
+    //             .unwrap()
+    //             .create_move(column, (row as i32 + 2 * row_shift) as u8);
+    //         results.push(chessmove.unwrap());
+    //     }
 
-    pub fn r#move(&self, position: Position) -> Result<Vec<Move>, String> {
-        let (row, column) = position.to_tuple();
-        let mut filtered_results: Vec<Move> = vec![];
-        let chessfield: &ChessField = self.get_field(row, column);
-        match chessfield.get_piece() {
-            None => Err("You must select field with chesspiece".to_string()),
-            Some(chessman) => {
-                let results: Vec<Move> = chessman.get_moves(&self);
-                for result in results {
-                    let end_pos = result.get_end_position();
-                    let possible_field: &ChessField =
-                        self.get_field(end_pos.get_row(), end_pos.get_column());
-                    if (possible_field.get_piece().is_some()
-                        && chessman.get_player()
-                            == possible_field.get_piece().as_ref().unwrap().get_player())
-                    .not()
-                    {
-                        filtered_results.push(result);
-                    }
-                }
-                println!("{:#?}", filtered_results);
-                println!("{}", filtered_results.len());
-                Ok(filtered_results)
-            }
-        }
-    }
+    //     if (0..8 as u8).contains(&right_column) {
+    //         let right_diagonal = self
+    //             .get_field((row as i32 + row_shift) as u8, right_column)
+    //             .get_piece();
+    //         if right_diagonal.is_some()
+    //             && right_diagonal.as_ref().unwrap().get_player() != self.get_current_player()
+    //         {
+    //             let chessmove = chessfield
+    //                 .get_piece()
+    //                 .as_ref()
+    //                 .unwrap()
+    //                 .create_move(right_column, (row as i32 + row_shift) as u8);
+    //             results.push(chessmove.unwrap());
+    //         }
+    //         // is_en_passantable
+    //     }
 
-    pub fn make_pawn_move(&self, start_position: Position) -> Result<Vec<Move>, String> {
-        let mut results: Vec<Move> = vec![];
-
-        let (row, column) = start_position.to_tuple();
-        let right_column = column + 1;
-        let left_column = row - 1;
-        let row_shift: i32 = if self.get_current_player() == Player::White {
-            1
-        } else {
-            -1
-        };
-
-        let chessfield: &ChessField = self.get_field(row, column);
-
-        if self
-            .get_field((row as i32 + row_shift) as u8, column)
-            .get_piece()
-            .is_none()
-        {
-            let chessmove = chessfield
-                .get_piece()
-                .as_ref()
-                .unwrap()
-                .create_move(column, (row as i32 + row_shift) as u8);
-            results.push(chessmove.unwrap());
-        }
-
-        if chessfield.get_piece().as_ref().unwrap().is_first_move()
-            && self
-                .get_field((row as i32 + row_shift) as u8, column)
-                .get_piece()
-                .is_none()
-            && self
-                .get_field((row as i32 + 2 * row_shift) as u8, column)
-                .get_piece()
-                .is_none()
-        {
-            let chessmove = chessfield
-                .get_piece()
-                .as_ref()
-                .unwrap()
-                .create_move(column, (row as i32 + 2 * row_shift) as u8);
-            results.push(chessmove.unwrap());
-        }
-
-        if (0..8 as u8).contains(&right_column) {
-            let right_diagonal = self
-                .get_field((row as i32 + row_shift) as u8, right_column)
-                .get_piece();
-            if right_diagonal.is_some()
-                && right_diagonal.as_ref().unwrap().get_player() != self.get_current_player()
-            {
-                let chessmove = chessfield
-                    .get_piece()
-                    .as_ref()
-                    .unwrap()
-                    .create_move(right_column, (row as i32 + row_shift) as u8);
-                results.push(chessmove.unwrap());
-            }
-            // is_en_passantable
-        }
-
-        if (0..8 as u8).contains(&left_column) {
-            let left_diagonal = self
-                .get_field((row as i32 + row_shift) as u8, left_column)
-                .get_piece();
-            if left_diagonal.is_some()
-                && left_diagonal.as_ref().unwrap().get_player() != self.get_current_player()
-            {
-                let chessmove = chessfield
-                    .get_piece()
-                    .as_ref()
-                    .unwrap()
-                    .create_move(left_column, (row as i32 + row_shift) as u8);
-                results.push(chessmove.unwrap());
-            }
-            // is_en_passantable
-        }
-        println!("{:#?}", results);
-        println!("{}", results.len());
-        Ok(results)
-    }
-
-    pub fn set_field<T: ChessPieceTrait + 'static>(&mut self, position: (i32, i32), chesspiece: T) {
-        let (row, column) = position;
-        let row_i = row as usize;
-        let column_i = column as usize;
-        if let Some(field) = self
-            .chessboard
-            .get_mut(row_i)
-            .and_then(|row| row.get_mut(column_i))
-        {
-            field.set_piece(Some(Box::new(chesspiece)));
-        }
-    }
-
-    pub fn get_field(&self, row: u8, column: u8) -> &ChessField {
-        let idx_row = row as usize;
-        let idx_column = column as usize;
-        &self.chessboard[idx_row][idx_column]
-    }
+    //     if (0..8 as u8).contains(&left_column) {
+    //         let left_diagonal = self
+    //             .get_field((row as i32 + row_shift) as u8, left_column)
+    //             .get_piece();
+    //         if left_diagonal.is_some()
+    //             && left_diagonal.as_ref().unwrap().get_player() != self.get_current_player()
+    //         {
+    //             let chessmove = chessfield
+    //                 .get_piece()
+    //                 .as_ref()
+    //                 .unwrap()
+    //                 .create_move(left_column, (row as i32 + row_shift) as u8);
+    //             results.push(chessmove.unwrap());
+    //         }
+    //         // is_en_passantable
+    //     }
+    //     println!("{:#?}", results);
+    //     println!("{}", results.len());
+    //     Ok(results)
+    // }
 }
 
 #[wasm_bindgen]
 impl Game {
     pub fn new() -> Self {
         Self {
-            current_player: Player::White,
-            other_player: Player::Black,
-            status: Status::Normal,
-            chessboard: Game::init_board(),
+            state: GameState::init(),
         }
     }
     /// Returns a list of possible positions that a piece on a given square can
     /// get to within a move.
     pub fn get_moves(&self, pos: Position) -> Vec<Position> {
-        vec![]
+        self.state.get_moves()
     }
     /// Returns true if the game has finished.
     pub fn is_finished(&self) -> bool {
-        false
+        self.state.is_finished()
     }
     /// Returns true if the move would result in a promotion of a pawn.
     pub fn is_promotion_move(&self, chess_move: Move) -> bool {
+        // self.state.is_promotion_move(chess_move)
         false
     }
     /// Tries to make a move; returns Ok(()) if the move was successful,
@@ -241,13 +184,13 @@ impl Game {
     /// Returns Some(Player) if a game has resulted in a win for a given player,
     /// None otherwise.
     pub fn get_winner(&self) -> Option<Player> {
-        None
+        self.state.get_winner()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::chessman::{Bishop, King, Knight, Pawn, Queen, Rook};
+    use crate::piece::{Bishop, King, Knight, Pawn, Queen, Rook};
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
