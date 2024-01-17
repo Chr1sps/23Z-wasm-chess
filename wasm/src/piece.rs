@@ -178,28 +178,79 @@ impl Piece {
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
         let result = vec![];
         match *self {
-            Self::Pawn(_, first_move, is_en_passantable) => {}
+            Self::Pawn(_, first_move, is_en_passantable) => {
+                unimplemented!()
+            }
             Self::Knight(PieceData {
                 position: _,
                 player: _,
             }) => {
                 let mut possible_shifts = iproduct!([-2, 2], [-1, 1]).collect_vec();
                 possible_shifts.extend(iproduct!([-1, 1], [-2, 2]));
-                return self.get_moves_shifts(possible_shifts, state);
+                self.get_moves_shifts(possible_shifts, state)
             }
             Self::Bishop(_) => {
                 let directions = iproduct!([1, -1], [1, -1]).collect_vec();
-                return self.get_moves_lines(directions, state);
+                self.get_moves_lines(directions, state)
             }
-            Self::Rook(_, can_castle) => {
+            Self::Rook(_, _) => {
                 let directions = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
-                return self.get_moves_lines(directions, state);
+                self.get_moves_lines(directions, state)
             }
             Self::Queen(_) => {
                 let directions = iproduct!([1, 0, -1], [1, 0, -1]).collect_vec();
-                return self.get_moves_lines(directions, state);
+                self.get_moves_lines(directions, state)
             }
-            Self::King(_, can_castle) => {}
+            Self::King(_, can_castle) => {
+                let shifts = iproduct!([1, 0, -1], [1, 0, -1])
+                    .filter(|&x| x != (0, 0))
+                    .collect_vec();
+                let mut result = self.get_moves_shifts(shifts, state);
+                let (row, _) = self.get_position().to_tuple();
+                // TODO: add rules for when enemy pieces attack the squares
+                // between the king and the rook
+                if can_castle {
+                    if let Some(Self::Rook(
+                        PieceData {
+                            position: _,
+                            player,
+                        },
+                        true,
+                    )) = state.get_piece(Position::new(row, 0).unwrap())
+                    {
+                        if *player == self.get_player()
+                            && (1..=3)
+                                .map(|idx| state.get_piece(Position::new(row, idx).unwrap()))
+                                .all(|piece| piece.is_none())
+                        {
+                            result.push(Move::new(
+                                self.get_position(),
+                                Position::new(row, 2).unwrap(),
+                            ));
+                        }
+                    }
+                    if let Some(Self::Rook(
+                        PieceData {
+                            position: _,
+                            player,
+                        },
+                        true,
+                    )) = state.get_piece(Position::new(row, 7).unwrap())
+                    {
+                        if *player == self.get_player()
+                            && (5..=6)
+                                .map(|idx| state.get_piece(Position::new(row, idx).unwrap()))
+                                .all(|piece| piece.is_none())
+                        {
+                            result.push(Move::new(
+                                self.get_position(),
+                                Position::new(row, 6).unwrap(),
+                            ));
+                        }
+                    }
+                }
+                result
+            }
         };
         result
     }
