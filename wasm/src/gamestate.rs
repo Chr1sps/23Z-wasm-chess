@@ -1,4 +1,4 @@
-use crate::{ChessField, Move, Player, PromotionType};
+use crate::{chessman::Piece, ChessField, Move, Player, Position, PromotionType};
 use wasm_bindgen::prelude::*;
 
 pub struct GameState {
@@ -43,6 +43,9 @@ impl GameState {
     }
 
     pub fn get_winner(&self) -> Option<Player> {
+        unimplemented!()
+    }
+    pub fn get_piece(&self, position: Position) -> Option<&Piece> {
         unimplemented!()
     }
 }

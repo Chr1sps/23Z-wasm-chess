@@ -3,7 +3,7 @@ pub use crate::player::Player;
 pub use crate::position::Position;
 pub use crate::r#move::Move;
 use core::any::Any;
-use itertools::iproduct;
+use itertools::{iproduct, Itertools};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -17,247 +17,209 @@ pub enum PieceType {
     Queen,
     King,
 }
-pub struct ChessPiece {
+
+pub struct PieceData {
     position: Position,
     player: Player,
 }
 
-impl ChessPiece {
-    pub fn new(new_position: Position, new_player: Player) -> ChessPiece {
-        ChessPiece {
+impl PieceData {
+    pub fn new(new_position: Position, new_player: Player) -> PieceData {
+        PieceData {
             position: new_position,
             player: new_player,
         }
     }
 }
+pub enum Piece {
+    Pawn(PieceData, bool, bool),
+    Knight(PieceData),
+    Bishop(PieceData),
+    Rook(PieceData, bool),
+    Queen(PieceData),
+    King(PieceData, bool),
+}
 
-pub trait ChessPieceTrait: Any {
-    fn get_moves_lines(&self, directions: Vec<(i32, i32)>) -> Vec<Move> {
-        let mut results: Vec<Move> = vec![];
+impl Piece {
+    /// Creates a new pawn.
+    pub fn new_pawn(
+        position: Position,
+        player: Player,
+        first_move: bool,
+        is_en_passantable: bool,
+    ) -> Self {
+        Self::Pawn(
+            PieceData::new(position, player),
+            first_move,
+            is_en_passantable,
+        )
+    }
+    /// Creates a new knight.
+    pub fn new_knight(position: Position, player: Player) -> Self {
+        Self::Knight(PieceData::new(position, player))
+    }
+    /// Creates a new bishop.
+    pub fn new_bishop(position: Position, player: Player) -> Self {
+        Self::Bishop(PieceData::new(position, player))
+    }
+    /// Creates a new rook.
+    pub fn new_rook(position: Position, player: Player, can_castle: bool) -> Self {
+        Self::Rook(PieceData::new(position, player), can_castle)
+    }
+    /// Creates a new queen.
+    pub fn new_queen(position: Position, player: Player) -> Self {
+        Self::Queen(PieceData::new(position, player))
+    }
+    /// Creates a new king.
+    pub fn new_king(position: Position, player: Player, can_castle: bool) -> Self {
+        Self::Rook(PieceData::new(position, player), can_castle)
+    }
+
+    /// Returns the piece's player.
+    pub fn get_player(&self) -> Player {
+        match *self {
+            Self::Pawn(data, _, _)
+            | Self::Knight(data)
+            | Self::Bishop(data)
+            | Self::Rook(data, _)
+            | Self::Queen(data)
+            | Self::King(data, _) => data.player,
+        }
+    }
+
+    /// Returns the piece's position.
+    pub fn get_position(&self) -> Position {
+        match *self {
+            Self::Pawn(data, _, _)
+            | Self::Knight(data)
+            | Self::Bishop(data)
+            | Self::Rook(data, _)
+            | Self::Queen(data)
+            | Self::King(data, _) => data.position,
+        }
+    }
+
+    /// Returns a PieceType value according to the piece's type.
+    pub fn get_piece_type(&self) -> PieceType {
+        match *self {
+            Self::Pawn(_, _, _) => PieceType::Pawn,
+            Self::Knight(_) => PieceType::Knight,
+            Self::Bishop(_) => PieceType::Bishop,
+            Self::Rook(_, _) => PieceType::Rook,
+            Self::Queen(_) => PieceType::Queen,
+            Self::King(_, _) => PieceType::King,
+        }
+    }
+
+    /// Returns true if a pawn is in a circumstance where it can be taken
+    /// en-passant by another pawn.
+    pub fn is_en_passantable(&self) -> bool {
+        if let Self::Pawn(_, _, result) = *self {
+            result
+        } else {
+            unreachable!("This method should be used on a pawn.")
+        }
+    }
+    /// Returns true if a king or a rook hasn't yet moved an is therefore
+    /// eligible for castling.
+    pub fn can_castle(&self) -> bool {
+        match *self {
+            Self::King(_, result) | Self::Rook(_, result) => result,
+            _ => unreachable!("This method should be used on a king or a rook."),
+        }
+    }
+    /// Checks if the pawn is about to make it's first move; if so - returns
+    /// true.
+    pub fn first_move(&self) -> bool {
+        if let Self::Pawn(_, result, _) = *self {
+            result
+        } else {
+            unreachable!("This method should be used on a pawn.")
+        }
+    }
+    fn get_moves_lines(&self, directions: Vec<(i32, i32)>, state: &GameState) -> Vec<Move> {
+        let mut result: Vec<Move> = vec![];
         for (dir_column, dir_row) in directions {
             for distance in 1..8 {
                 let new_column =
                     ((self.get_position().get_column() as i32) + distance * dir_column) as u8;
                 let new_row = ((self.get_position().get_row() as i32) + distance * dir_row) as u8;
-                match self.create_move(new_column, new_row) {
-                    None => continue,
-                    Some(chessmove) => results.push(chessmove),
+                if let Some(position) = Position::new(new_row, new_column) {
+                    if let Some(other_piece) = state.get_piece(position) {
+                        if other_piece.get_player() != self.get_player() {
+                            result.push(Move::new(self.get_position(), position));
+                        }
+                        break;
+                    } else {
+                        result.push(Move::new(self.get_position(), position));
+                    }
                 }
-            }
-        }
-        results
-    }
-
-    fn get_moves_shifts(&self, shifts: Vec<(i32, i32)>) -> Vec<Move> {
-        let mut result: Vec<Move> = vec![];
-        for (column_shift, row_shift) in shifts {
-            let new_column = (self.get_position().get_column() as i32 + column_shift) as u8;
-            let new_row = (self.get_position().get_row() as i32 + row_shift) as u8;
-            if let Some(result_move) = self.create_move(new_column, new_row) {
-                result.push(result_move);
             }
         }
         result
     }
-
-    fn create_move(&self, new_column: u8, new_row: u8) -> Option<Move> {
-        if let Some(end_position) = Position::new(new_row, new_column) {
-            Some(Move::new(self.get_position(), end_position))
-        } else {
-            None
+    fn get_moves_shifts(&self, shifts: Vec<(i32, i32)>, state: &GameState) -> Vec<Move> {
+        let mut result: Vec<Move> = vec![];
+        for (column_shift, row_shift) in shifts {
+            let new_column = (self.get_position().get_column() as i32 + column_shift) as u8;
+            let new_row = (self.get_position().get_row() as i32 + row_shift) as u8;
+            if let Some(new_pos) = Position::new(new_column, new_row) {
+                if let Some(other_piece) = state.get_piece(new_pos) {
+                    if other_piece.get_player() != self.get_player() {
+                        result.push(Move::new(self.get_position(), new_pos));
+                    }
+                }
+            }
         }
+        result
     }
-
-    fn calculate_params(&self) -> Vec<(i32, i32)> {
+    fn calculate_directions() -> Vec<(i32, i32)> {
         let a = vec![1, 0, -1];
         let b = vec![1, 0, -1];
         let mut params: Vec<(i32, i32)> = iproduct!(a, b).collect();
         params.retain(|&x| x != (0, 0));
         params
     }
-
-    fn get_moves(&self, state: &GameState) -> Vec<Move>;
-
-    fn get_player(&self) -> Player;
-
-    fn get_position(&self) -> Position;
-}
-
-pub struct Pawn {
-    chessman: ChessPiece,
-    pub first_move: bool,
-    #[allow(dead_code)]
-    is_en_passantable: bool,
-}
-
-impl Pawn {
-    fn is_first_move(&self) -> bool {
-        self.first_move
-    }
-
-    pub fn new(position: Position, player: Player) -> Pawn {
-        Pawn {
-            chessman: ChessPiece::new(position, player),
-            first_move: true,
-            is_en_passantable: false,
-        }
-    }
-}
-
-impl ChessPieceTrait for Pawn {
-    fn get_moves(&self) -> Vec<Move> {
-        let result: Vec<Move> = vec![];
+    /// Returns a vector of moves possible to make for a given piece given a
+    /// game state object. This function takes into account things such as
+    pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
+        let result = vec![];
+        match *self {
+            Self::Pawn(PieceData { position, player }, first_move, is_en_passantable) => {}
+            Self::Knight(PieceData {
+                position,
+                player: _,
+            }) => {
+                let mut possible_shifts = iproduct!([-2, 2], [-1, 1]).collect_vec();
+                possible_shifts.extend(iproduct!([-1, 1], [-2, 2]));
+                return self.get_moves_shifts(possible_shifts, state);
+            }
+            Self::Bishop(PieceData {
+                position,
+                player: _,
+            }) => {
+                let directions = iproduct!([1, -1], [1, -1]).collect_vec();
+                return self.get_moves_lines(directions, state);
+            }
+            Self::Rook(
+                PieceData {
+                    position,
+                    player: _,
+                },
+                can_castle,
+            ) => {
+                let directions: Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
+                return self.get_moves_lines(directions, state);
+            }
+            Self::Queen(PieceData {
+                position,
+                player: _,
+            }) => {
+                let directions = iproduct!([1, 0, -1], [1, 0, -1]).collect_vec();
+                return self.get_moves_lines(directions, state);
+            }
+            Self::King(PieceData { position, player }, can_castle) => {}
+        };
         result
-    }
-
-    fn get_player(&self) -> Player {
-        self.chessman.player
-    }
-
-    fn get_position(&self) -> Position {
-        self.chessman.position
-    }
-}
-
-pub struct Rook {
-    chessman: ChessPiece,
-}
-
-impl Rook {
-    pub fn new(position: Position, player: Player) -> Rook {
-        Rook {
-            chessman: ChessPiece::new(position, player),
-        }
-    }
-}
-
-impl ChessPieceTrait for Rook {
-    fn get_moves(&self) -> Vec<Move> {
-        let directions: Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
-        self.get_moves_lines(directions)
-    }
-
-    fn get_player(&self) -> Player {
-        self.chessman.player
-    }
-
-    fn get_position(&self) -> Position {
-        self.chessman.position
-    }
-}
-
-pub struct King {
-    chessman: ChessPiece,
-}
-
-impl King {
-    pub fn new(position: Position, player: Player) -> King {
-        King {
-            chessman: ChessPiece::new(position, player),
-        }
-    }
-}
-
-impl ChessPieceTrait for King {
-    fn get_moves(&self) -> Vec<Move> {
-        let possible_shifts: Vec<(i32, i32)> = self.calculate_params();
-        self.get_moves_shifts(possible_shifts)
-    }
-
-    fn get_player(&self) -> Player {
-        self.chessman.player
-    }
-
-    fn get_position(&self) -> Position {
-        self.chessman.position
-    }
-}
-
-pub struct Queen {
-    chessman: ChessPiece,
-}
-
-impl Queen {
-    pub fn new(position: Position, player: Player) -> Queen {
-        Queen {
-            chessman: ChessPiece::new(position, player),
-        }
-    }
-}
-
-impl ChessPieceTrait for Queen {
-    fn get_moves(&self) -> Vec<Move> {
-        let directions: Vec<(i32, i32)> = self.calculate_params();
-        return self.get_moves_lines(directions);
-    }
-
-    fn get_player(&self) -> Player {
-        self.chessman.player
-    }
-
-    fn get_position(&self) -> Position {
-        self.chessman.position
-    }
-}
-
-pub struct Bishop {
-    chessman: ChessPiece,
-}
-impl Bishop {
-    pub fn new(position: Position, player: Player) -> Bishop {
-        Bishop {
-            chessman: ChessPiece::new(position, player),
-        }
-    }
-}
-
-impl ChessPieceTrait for Bishop {
-    fn get_moves(&self) -> Vec<Move> {
-        let a = vec![-1, 1];
-        let b = vec![-1, 1];
-        return self.get_moves_lines(iproduct!(a, b).collect());
-    }
-
-    fn get_player(&self) -> Player {
-        self.chessman.player
-    }
-
-    fn get_position(&self) -> Position {
-        self.chessman.position
-    }
-}
-
-pub struct Knight {
-    chessman: ChessPiece,
-}
-
-impl Knight {
-    pub fn new(position: Position, player: Player) -> Knight {
-        Knight {
-            chessman: ChessPiece::new(position, player),
-        }
-    }
-}
-
-impl ChessPieceTrait for Knight {
-    fn get_moves(&self) -> Vec<Move> {
-        let possible_shifts: Vec<(i32, i32)> = self.calculate_params();
-        return self.get_moves_shifts(possible_shifts);
-    }
-
-    fn calculate_params(&self) -> Vec<(i32, i32)> {
-        let a = vec![-2, 2];
-        let b = vec![-1, 1];
-        let mut possible_shifts: Vec<(i32, i32)> = iproduct!(a.clone(), b.clone()).collect();
-        possible_shifts.extend(iproduct!(b, a).collect::<Vec<(i32, i32)>>());
-        possible_shifts
-    }
-
-    fn get_player(&self) -> Player {
-        self.chessman.player
-    }
-
-    fn get_position(&self) -> Position {
-        self.chessman.position
     }
 }
