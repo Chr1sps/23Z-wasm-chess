@@ -172,6 +172,29 @@ impl Piece {
         }
         result
     }
+    fn check_castle_move(&self, state: &GameState, right_side: bool) -> Option<Move> {
+        let (row, _) = self.get_position().to_tuple();
+        if let Some(Self::Rook(
+            PieceData {
+                position: _,
+                player,
+            },
+            true,
+        )) = state.get_piece(Position::new(row, if right_side { 7 } else { 0 }).unwrap())
+        {
+            if *player == self.get_player()
+                && if right_side { 5..=6 } else { 1..=3 }
+                    .map(|idx| state.get_piece(Position::new(row, idx).unwrap()))
+                    .all(|piece| piece.is_none())
+            {
+                return Some(Move::new(
+                    self.get_position(),
+                    Position::new(row, if right_side { 6 } else { 2 }).unwrap(),
+                ));
+            }
+        }
+        None
+    }
     /// Returns a vector of moves possible to make for a given piece given a
     /// game state object. The resulting moves are guaranteed to be legal
     /// according to the rules of the game.
@@ -208,45 +231,13 @@ impl Piece {
                 let mut result = self.get_moves_shifts(shifts, state);
                 let (row, _) = self.get_position().to_tuple();
                 // TODO: add rules for when enemy pieces attack the squares
-                // between the king and the rook
+                // between the king and the rook.
                 if can_castle {
-                    if let Some(Self::Rook(
-                        PieceData {
-                            position: _,
-                            player,
-                        },
-                        true,
-                    )) = state.get_piece(Position::new(row, 0).unwrap())
-                    {
-                        if *player == self.get_player()
-                            && (1..=3)
-                                .map(|idx| state.get_piece(Position::new(row, idx).unwrap()))
-                                .all(|piece| piece.is_none())
-                        {
-                            result.push(Move::new(
-                                self.get_position(),
-                                Position::new(row, 2).unwrap(),
-                            ));
-                        }
+                    if let Some(chess_move) = self.check_castle_move(state, false) {
+                        result.push(chess_move);
                     }
-                    if let Some(Self::Rook(
-                        PieceData {
-                            position: _,
-                            player,
-                        },
-                        true,
-                    )) = state.get_piece(Position::new(row, 7).unwrap())
-                    {
-                        if *player == self.get_player()
-                            && (5..=6)
-                                .map(|idx| state.get_piece(Position::new(row, idx).unwrap()))
-                                .all(|piece| piece.is_none())
-                        {
-                            result.push(Move::new(
-                                self.get_position(),
-                                Position::new(row, 6).unwrap(),
-                            ));
-                        }
+                    if let Some(chess_move) = self.check_castle_move(state, true) {
+                        result.push(chess_move);
                     }
                 }
                 result
