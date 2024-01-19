@@ -13,6 +13,7 @@ pub mod r#move;
 pub mod piece;
 pub mod player;
 pub mod position;
+mod utils;
 
 #[derive(Clone, Copy)]
 pub enum Status {
@@ -149,6 +150,7 @@ pub struct Game {
 #[wasm_bindgen]
 impl Game {
     pub fn new() -> Self {
+        utils::set_panic_hook();
         Self {
             state: GameState::init(),
         }

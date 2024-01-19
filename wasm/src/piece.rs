@@ -17,6 +17,9 @@ pub enum PieceType {
     King,
 }
 
+/// This struct contains data that is present in every Piece enum variant,
+/// namely the position of a piece and which player does it belong to.
+#[derive(Clone, Copy)]
 pub struct PieceData {
     position: Position,
     player: Player,
@@ -30,28 +33,28 @@ impl PieceData {
         }
     }
 }
+
+#[derive(Clone, Copy)]
 pub enum Piece {
-    Pawn(PieceData, bool, bool),
+    /// The pawn variant; contains a field which indicates if a pawn is yet to
+    /// make it's first move, and if it's therefore able to make a move forward
+    /// by two squares.
+    Pawn(PieceData, bool),
     Knight(PieceData),
     Bishop(PieceData),
+    /// The rook variant; contains a field which indicates if the rook can be
+    /// used for castling.
     Rook(PieceData, bool),
     Queen(PieceData),
+    /// The king variant; contains a field which indicates if the rook can be
+    /// used for castling.
     King(PieceData, bool),
 }
 
 impl Piece {
     /// Creates a new pawn.
-    pub fn new_pawn(
-        position: Position,
-        player: Player,
-        first_move: bool,
-        is_en_passantable: bool,
-    ) -> Self {
-        Self::Pawn(
-            PieceData::new(position, player),
-            first_move,
-            is_en_passantable,
-        )
+    pub fn new_pawn(position: Position, player: Player, first_move: bool) -> Self {
+        Self::Pawn(PieceData::new(position, player), first_move)
     }
     /// Creates a new knight.
     pub fn new_knight(position: Position, player: Player) -> Self {
@@ -77,7 +80,7 @@ impl Piece {
     /// Returns the piece's player.
     pub fn get_player(&self) -> Player {
         match self {
-            Self::Pawn(data, _, _)
+            Self::Pawn(data, _)
             | Self::Knight(data)
             | Self::Bishop(data)
             | Self::Rook(data, _)
@@ -89,7 +92,7 @@ impl Piece {
     /// Returns the piece's position.
     pub fn get_position(&self) -> Position {
         match self {
-            Self::Pawn(data, _, _)
+            Self::Pawn(data, _)
             | Self::Knight(data)
             | Self::Bishop(data)
             | Self::Rook(data, _)
@@ -101,7 +104,7 @@ impl Piece {
     /// Returns a PieceType value according to the piece's type.
     pub fn get_type(&self) -> PieceType {
         match *self {
-            Self::Pawn(_, _, _) => PieceType::Pawn,
+            Self::Pawn(_, _) => PieceType::Pawn,
             Self::Knight(_) => PieceType::Knight,
             Self::Bishop(_) => PieceType::Bishop,
             Self::Rook(_, _) => PieceType::Rook,
@@ -110,15 +113,15 @@ impl Piece {
         }
     }
 
-    /// Returns true if a pawn is in a circumstance where it can be taken
-    /// en-passant by another pawn.
-    pub fn is_en_passantable(&self) -> bool {
-        if let Self::Pawn(_, _, result) = *self {
-            result
-        } else {
-            unreachable!("This method should be used on a pawn.")
-        }
-    }
+    // /// Returns true if a pawn is in a circumstance where it can be taken
+    // /// en-passant by another pawn.
+    // pub fn is_en_passantable(&self) -> bool {
+    //     if let Self::Pawn(_, _, result) = *self {
+    //         result
+    //     } else {
+    //         unreachable!("This method should be used on a pawn.")
+    //     }
+    // }
     /// Returns true if a king or a rook hasn't yet moved an is therefore
     /// eligible for castling.
     pub fn can_castle(&self) -> bool {
@@ -130,7 +133,7 @@ impl Piece {
     /// Checks if the pawn is about to make it's first move; if so - returns
     /// true.
     pub fn first_move(&self) -> bool {
-        if let Self::Pawn(_, result, _) = *self {
+        if let Self::Pawn(_, result) = *self {
             result
         } else {
             unreachable!("This method should be used on a pawn.")
@@ -173,7 +176,7 @@ impl Piece {
         result
     }
     fn check_castle_move(&self, state: &GameState, right_side: bool) -> Option<Move> {
-        let (row, _) = self.get_position().to_tuple();
+        let (row, _) = self.get_position().as_tuple();
         if let Some(Self::Rook(
             PieceData {
                 position: _,
@@ -199,10 +202,23 @@ impl Piece {
     /// game state object. The resulting moves are guaranteed to be legal
     /// according to the rules of the game.
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
-        let result = vec![];
         match *self {
-            Self::Pawn(_, first_move, is_en_passantable) => {
-                unimplemented!()
+            Self::Pawn(_, first_move) => {
+                let mut result = vec![];
+                let (row, col) = self.get_position().as_tuple();
+                if let Some(to_pos) = Position::new(row + 1, col) {
+                    if let None = state.get_piece(to_pos) {
+                        result.push(Move::new(self.get_position(), to_pos));
+                    }
+                }
+                if first_move {
+                    if let Some(to_pos) = Position::new(row + 2, col) {
+                        if let None = state.get_piece(to_pos) {
+                            result.push(Move::new(self.get_position(), to_pos));
+                        }
+                    }
+                }
+                result
             }
             Self::Knight(PieceData {
                 position: _,
@@ -229,7 +245,7 @@ impl Piece {
                     .filter(|&x| x != (0, 0))
                     .collect_vec();
                 let mut result = self.get_moves_shifts(shifts, state);
-                let (row, _) = self.get_position().to_tuple();
+                let (row, _) = self.get_position().as_tuple();
                 // TODO: add rules for when enemy pieces attack the squares
                 // between the king and the rook.
                 if can_castle {
@@ -242,7 +258,6 @@ impl Piece {
                 }
                 result
             }
-        };
-        result
+        }
     }
 }
