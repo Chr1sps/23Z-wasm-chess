@@ -180,7 +180,6 @@ impl GameState {
 
     /// Returns true if the current player is under check.
     fn is_checked(&self) -> bool {
-        println!("{:?}", self.current_player);
         let king_position = self
             .board
             .iter()
@@ -189,8 +188,6 @@ impl GameState {
                 field
                     .as_ref()
                     .map(|piece| {
-                        println!("{:?}", piece.get_player());
-                        println!("{:?}", piece.get_type());
                         piece.get_player() == self.current_player && (piece.get_type() == PieceType::King)
                     })
                     .unwrap_or(false)
@@ -206,7 +203,7 @@ impl GameState {
     /// If a match has resulted in a win, returns the winning player. Otherwise
     /// returns None.
     pub fn get_winner(&self) -> Option<Player> {
-        if self.is_checked() {
+        if self.is_checked() && self.is_finished() {
             Some(self.current_player.get_enemy())
         } else {
             None
@@ -265,6 +262,8 @@ mod tests {
     use crate::*;
     fn test_get_moves(state: GameState, position: Position, expected_moves: &mut Vec<Move>) {
         let mut moves = state.get_moves(position);
+        println!("Actual moves: ");
+        println!("{:?}", moves);
         expected_moves.sort();
         moves.sort();
         assert_eq!(moves, *expected_moves);
@@ -333,19 +332,35 @@ mod tests {
     //     let state = GameState::from_board(board, Player::White, None).unwrap();
     //     let pos = make_pos!(4, 3);
     //     let mut expected_moves = vec![make_move!(4, 3, 5, 3), make_move!(4, 3, 5, 4)];
+    //     println!("{:?}", expected_moves);
     //     test_get_moves(state, pos, &mut expected_moves);
     // }
-    // #[test]
-    // fn test_pawn_en_passant() {
-    //     let board = make_board!(
-    //         Piece::new_pawn(make_pos!(4, 3), Player::White, false),
-    //         Piece::new_pawn(make_pos!(4, 4), Player::Black, false),
-    //     );
-    //     let state = GameState::from_board(board, Player::White, Some(make_pos!(4, 4))).unwrap();
-    //     let pos = make_pos!(4, 3);
-    //     let mut expected_moves = vec![make_move!(4, 3, 5, 3), make_move!(4, 3, 5, 4)];
-    //     test_get_moves(state, pos, &mut expected_moves);
-    // }
+    #[test]
+    fn test_pawn_en_passant() {
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(2, 4), Player::White, false),
+            Piece::new_pawn(make_pos!(4, 5), Player::Black, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let new_move = make_move!(2, 4, 4, 4); 
+        let new_state = GameState::transform_state(&state, new_move, None);
+        println!("{:?}", state.get_piece(Position::new(4, 4).unwrap()));
+        let result = GameState::update_en_passant(&state, &new_move);
+        let mut expected_moves = vec![make_move!(4, 5, 3, 4), make_move!(4, 5, 3, 5)];
+        let pos = make_pos!(4, 5);
+        test_get_moves(new_state, pos, &mut expected_moves);
+
+
+
+        // let board = make_board!(
+        //     Piece::new_pawn(make_pos!(4, 3), Player::White, false),
+        //     Piece::new_pawn(make_pos!(4, 4), Player::Black, false),
+        // );
+        // let state = GameState::from_board(board, Player::White, Some(make_pos!(4, 4))).unwrap();
+        // let pos = make_pos!(4, 3);
+        // let mut expected_moves = vec![make_move!(4, 3, 5, 3), make_move!(4, 3, 5, 4)];
+        // test_get_moves(state, pos, &mut expected_moves);
+    }
     // #[test]
     // fn test_knight_moves_center() {
     //     let board = make_board!(Piece::new_knight(make_pos!(4, 3), Player::White),);

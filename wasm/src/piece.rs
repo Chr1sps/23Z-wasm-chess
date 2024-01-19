@@ -21,7 +21,7 @@ pub enum PieceType {
 
 /// This struct contains data that is present in every Piece enum variant,
 /// namely the position of a piece and which player does it belong to.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct PieceData {
     position: Position,
     player: Player,
@@ -43,7 +43,7 @@ impl PieceData {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Piece {
     /// The pawn variant; contains a field which indicates if a pawn is yet to
     /// make it's first move, and if it's therefore able to make a move forward
@@ -218,20 +218,78 @@ impl Piece {
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
         match *self {
             Self::Pawn(_, first_move) => {
+                let idx: i8;
+                if self.get_player() == Player::White {
+                    idx = 1;
+                } else {
+                    idx = -1;
+                }
+                println!("first move: {}", first_move);
                 let mut result = vec![];
                 let (row, col) = self.get_position().as_tuple();
-                if let Some(to_pos) = Position::new(row + 1, col) {
+                if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col) {
+                    println!("to_pos: {:?}", to_pos);
                     if let None = state.get_piece(to_pos) {
+                        println!("pushing");
                         result.push(Move::new(self.get_position(), to_pos));
                     }
                 }
                 if first_move {
-                    if let Some(to_pos) = Position::new(row + 2, col) {
+                    if let Some(to_pos) = Position::new((row as i8+ 2 * idx).try_into().unwrap(), col) {
                         if let None = state.get_piece(to_pos) {
                             result.push(Move::new(self.get_position(), to_pos));
                         }
                     }
                 }
+                            
+                if let Some(to_pos) = Position::new((row as i8+ idx).try_into().unwrap(), col - 1) {
+                    if let Some(piece) = state.get_piece(to_pos) {
+                        if piece.get_player() != self.get_player() {
+                            result.push(Move::new(self.get_position(), to_pos));
+                        }
+                    }
+
+                }
+
+                if let Some(to_pos) = Position::new((row as i8+ idx).try_into().unwrap(), col + 1) {
+                    if let Some(piece) = state.get_piece(to_pos) {
+                        if piece.get_player() != self.get_player() {
+                            result.push(Move::new(self.get_position(), to_pos));
+                        }
+                    }
+
+                }
+
+                println!("row, column: {}, {}", row, col);
+                println!("{:?}", state.get_piece(Position::new(row, col - 1).unwrap()));
+                if let Some(piece) = state.get_piece(Position::new(row, col - 1).unwrap()) {
+                    println!("piece:");
+                    if state.get_en_passant_square() == Some(&Position::new(row, col - 1).unwrap()) {
+                        println!("en passant");
+                        if piece.get_player() != self.get_player() {
+                            println!("pushing");
+                            if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col - 1) {
+                                result.push(Move::new(self.get_position(), to_pos));
+                            }
+                        }
+                    }
+                }
+
+                if let Some(piece) = state.get_piece(Position::new(row, col + 1).unwrap()) {
+                    
+                    if state.get_en_passant_square() == Some(&Position::new(row, col + 1).unwrap()) {
+                        
+                        if piece.get_player() != self.get_player() {
+                            
+                            if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col + 1) {
+                                result.push(Move::new(self.get_position(), to_pos));
+                            }
+                        }
+                    }
+                }
+
+                
+            
                 result
             }
             Self::Knight(PieceData {
@@ -264,6 +322,7 @@ impl Piece {
                 let (row, _) = self.get_position().as_tuple();
                 // TODO: add rules for when enemy pieces attack the squares
                 // between the king and the rook.
+
                 if can_castle {
                     if let Some(chess_move) = self.check_castle_move(state, false) {
                         result.push(chess_move);

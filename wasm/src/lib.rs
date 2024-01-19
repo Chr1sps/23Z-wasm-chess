@@ -163,8 +163,7 @@ impl Game {
     }
     /// Returns true if the move would result in a promotion of a pawn.
     pub fn is_promotion_move(&self, chess_move: Move) -> bool {
-        // self.state.is_promotion_move(chess_move)
-        false
+        self.state.is_promotion_move(chess_move)
     }
     /// Tries to make a move; returns Ok(()) if the move was successful,
     /// Err(String) otherwise.
@@ -202,24 +201,24 @@ impl Game {
 //     // Note this useful idiom: importing names from outer (for mod tests) scope.
 //     use super::*;
 
-//     #[test]
-//     fn test_change_round() {
-//         let mut game = Game::new();
-//         game.change_round();
-//         assert_eq!(game.get_current_player(), Player::Black);
-//         assert_eq!(game.get_other_player(), Player::White);
-//     }
+    // #[test]
+    // fn test_change_round() {
+    //     let mut game = Game::new();
+    //     game.change_round();
+    //     assert_eq!(game.get_current_player(), Player::Black);
+    //     assert_eq!(game.get_other_player(), Player::White);
+    // }
 
-//     #[test]
-//     fn test_rook_movement() {
-//         let mut game = Game::new();
-//         game.set_field(
-//             (4, 4),
-//             Rook::new(Position::new(4, 4).unwrap(), Player::White),
-//         );
-//         let result = game.r#move(Position::new(4, 4).unwrap());
-//         assert_eq!(result.unwrap().len(), 14);
-//     }
+    // #[test]
+    // fn test_rook_movement() {
+    //     let mut game = Game::new();
+    //     game.set_field(
+    //         (4, 4),
+    //         Rook::new(Position::new(4, 4).unwrap(), Player::White),
+    //     );
+    //     let result = game.r#move(Position::new(4, 4).unwrap());
+    //     assert_eq!(result.unwrap().len(), 14);
+    // }
 
 //     #[test]
 //     fn test_queen_movement() {
@@ -265,14 +264,14 @@ impl Game {
 //         assert_eq!(result.unwrap().len(), 8);
 //     }
 
-//     #[test]
-//     fn test_pawn_movement() {
-//         let mut game = Game::new();
-//         game.set_field(
-//             (4, 4),
-//             Pawn::new(Position::new(4, 4).unwrap(), Player::White),
-//         );
-//         let result = game.make_pawn_move(Position::new(4, 4).unwrap());
-//         assert_eq!(result.unwrap().len(), 2);
-//     }
+    // #[test]
+    // fn test_pawn_movement() {
+    //     let mut game = Game::new();
+    //     game.set_field(
+    //         (4, 4),
+    //         Pawn::new(Position::new(4, 4).unwrap(), Player::White),
+    //     );
+    //     let result = game.make_pawn_move(Position::new(4, 4).unwrap());
+    //     assert_eq!(result.unwrap().len(), 2);
+    // }
 // }
