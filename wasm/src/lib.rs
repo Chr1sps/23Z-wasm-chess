@@ -173,7 +173,13 @@ impl Game {
         chess_move: Move,
         promotion_type: Option<PromotionType>,
     ) -> Result<(), String> {
-        Ok(())
+        let possible_moves = self.get_moves(chess_move.get_current_position());
+        if possible_moves.contains(&chess_move.get_end_position()) {
+            self.state = GameState::transform_state(&self.state, chess_move, promotion_type);
+            Ok(())
+        } else {
+            Err("Invalid move".to_string())
+        }
     }
 
     /// Returns Some(Player) if a game has resulted in a win for a given player,
