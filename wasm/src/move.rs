@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use crate::Position;
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Move {
     current_position: Position,
     end_position: Position,

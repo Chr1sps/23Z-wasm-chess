@@ -162,7 +162,7 @@ impl Piece {
     }
     fn get_moves_shifts(&self, shifts: Vec<(i32, i32)>, state: &GameState) -> Vec<Move> {
         let mut result: Vec<Move> = vec![];
-        for (column_shift, row_shift) in shifts {
+        for (row_shift, column_shift) in shifts {
             let new_column = (self.get_position().get_column() as i32 + column_shift) as u8;
             let new_row = (self.get_position().get_row() as i32 + row_shift) as u8;
             if let Some(new_pos) = Position::new(new_column, new_row) {
@@ -170,6 +170,8 @@ impl Piece {
                     if other_piece.get_player() != self.get_player() {
                         result.push(Move::new(self.get_position(), new_pos));
                     }
+                } else {
+                    result.push(Move::new(self.get_position(), new_pos));
                 }
             }
         }
@@ -237,7 +239,9 @@ impl Piece {
                 self.get_moves_lines(directions, state)
             }
             Self::Queen(_) => {
-                let directions = iproduct!([1, 0, -1], [1, 0, -1]).collect_vec();
+                let directions = iproduct!([1, 0, -1], [1, 0, -1])
+                    .filter(|&x| x != (0, 0))
+                    .collect_vec();
                 self.get_moves_lines(directions, state)
             }
             Self::King(_, can_castle) => {
