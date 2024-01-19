@@ -28,8 +28,8 @@ impl GameState {
     /// given promotion. This method does NOT check the legality of a given
     /// move, but only performs it. If a promotion is specified, the moved
     /// piece is substituted with an appropriate new one.
-    pub fn generate_next_state(
-        old_state: GameState,
+    pub fn transform_state(
+        state: &GameState,
         r#move: Move,
         promotion: Option<PromotionType>,
     ) -> Self {
@@ -92,8 +92,18 @@ impl GameState {
         }
     }
 
-    /// Returns all the moves that can be made by the current player.
-    pub fn get_all_moves(&self) -> Vec<Move> {
+    /// Returns all the moves that can be made by a piece on a given position
+    /// (returns an empty vector if there is no piece there).
+    pub fn get_moves(&self, position: Position) -> Vec<Move> {
+        let (row, col) = position.as_tuple();
+        match &self.board[row as usize][col as usize] {
+            Some(piece) => piece.get_moves(&self),
+            None => vec![],
+        }
+    }
+
+    /// Returns all the legal moves that can be made by the current player.
+    fn get_all_moves(&self) -> Vec<Move> {
         let mut result = vec![];
         for field in self.board.iter().flatten() {
             if let Some(piece) = field {
@@ -105,27 +115,21 @@ impl GameState {
         result
     }
 
-    /// Returns all the moves that can be made by a piece on a given position
-    /// (returns an empty vector if there is no piece there).
-    pub fn get_moves(&self, position: Position) -> Vec<Move> {
-        let (row, col) = position.as_tuple();
-        match &self.board[row as usize][col as usize] {
-            Some(piece) => piece.get_moves(&self),
-            None => vec![],
-        }
-    }
-
     /// Returns true if the current state indicates that the game has finished.
     pub fn is_finished(&self) -> bool {
         self.get_all_moves().is_empty()
     }
 
+    /// Returns true if the current player is under check.
+    fn is_checked(&self) -> bool {
+        unimplemented!()
+    }
+
     /// If a match has resulted in a win, returns the winning player. Otherwise
     /// returns None.
     pub fn get_winner(&self) -> Option<Player> {
-        let moves = self.get_all_moves();
-        if moves.is_empty() {
-            Some(Player::White)
+        if self.is_checked() {
+            Some(self.current_player.get_enemy())
         } else {
             None
         }

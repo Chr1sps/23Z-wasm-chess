@@ -15,13 +15,6 @@ pub mod player;
 pub mod position;
 mod utils;
 
-#[derive(Clone, Copy)]
-pub enum Status {
-    Check,
-    Checkmate,
-    Normal,
-}
-
 #[wasm_bindgen]
 #[repr(u8)]
 #[derive(Clone)]
@@ -159,7 +152,7 @@ impl Game {
     /// get to within a move.
     pub fn get_moves(&self, pos: Position) -> Vec<Position> {
         self.state
-            .get_all_moves()
+            .get_moves(pos)
             .into_iter()
             .map(move |x| x.get_end_position())
             .collect_vec()
@@ -189,6 +182,8 @@ impl Game {
         self.state.get_winner()
     }
 
+    /// Return a PieceType enum variant indicating the currently residing
+    /// piece or null if there is none.
     pub fn get_piece_type(&self, position: Position) -> Option<PieceType> {
         self.state.get_piece(position).map(|piece| piece.get_type())
     }
