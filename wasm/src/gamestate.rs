@@ -23,18 +23,6 @@ macro_rules! make_board {
         _temp_board
     }};
 }
-// macro_rules! make_pawn_row {
-//     ($row:expr, $player:expr) => {
-//         Piece::new_pawn(Position::new($row, $i).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 1).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 2).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 3).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 4).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 5).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 6).unwrap(), $player, true),
-//         Piece::new_pawn(Position::new($row, 7).unwrap(), $player, true)
-//     };
-// }
 impl GameState {
     /// Generates the next state that would be the result of a given move and a
     /// given promotion. This method does NOT check the legality of a given
@@ -182,6 +170,10 @@ mod tests {
         expected_moves.sort();
         moves.sort();
         assert_eq!(moves, *expected_moves);
+    }
+    fn check_move_not_in_get_moves(state: &GameState, position: &Position, checked_move: &Move) {
+        let moves = state.get_moves(*position);
+        assert!(moves.contains(checked_move));
     }
     macro_rules! make_move {
         ($a:expr, $b:expr, $c:expr, $d:expr) => {
@@ -470,5 +462,255 @@ mod tests {
             make_move!(3, 3, 7, 3),
         ];
         test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_queen_can_take() {
+        let board = make_board!(
+            Piece::new_queen(make_pos!(3, 3), Player::White),
+            Piece::new_queen(make_pos!(2, 3), Player::Black),
+            Piece::new_queen(make_pos!(2, 2), Player::Black),
+            Piece::new_queen(make_pos!(3, 2), Player::Black),
+            Piece::new_queen(make_pos!(4, 2), Player::Black),
+            Piece::new_queen(make_pos!(4, 3), Player::Black),
+            Piece::new_queen(make_pos!(4, 4), Player::Black),
+            Piece::new_queen(make_pos!(3, 4), Player::Black),
+            Piece::new_queen(make_pos!(2, 4), Player::Black),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(3, 3, 2, 2),
+            make_move!(3, 3, 4, 4),
+            make_move!(3, 3, 4, 2),
+            make_move!(3, 3, 2, 4),
+            make_move!(3, 3, 3, 2),
+            make_move!(3, 3, 3, 4),
+            make_move!(3, 3, 2, 3),
+            make_move!(3, 3, 4, 3),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_queen_blocked() {
+        let board = make_board!(
+            Piece::new_queen(make_pos!(3, 3), Player::White),
+            Piece::new_queen(make_pos!(2, 3), Player::White),
+            Piece::new_queen(make_pos!(2, 2), Player::White),
+            Piece::new_queen(make_pos!(3, 2), Player::White),
+            Piece::new_queen(make_pos!(4, 2), Player::White),
+            Piece::new_queen(make_pos!(4, 3), Player::White),
+            Piece::new_queen(make_pos!(4, 4), Player::White),
+            Piece::new_queen(make_pos!(3, 4), Player::White),
+            Piece::new_queen(make_pos!(2, 4), Player::White),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_moves() {
+        let board = make_board!(Piece::new_king(make_pos!(3, 3), Player::White, false),);
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(3, 3, 2, 2),
+            make_move!(3, 3, 4, 4),
+            make_move!(3, 3, 4, 2),
+            make_move!(3, 3, 2, 4),
+            make_move!(3, 3, 3, 2),
+            make_move!(3, 3, 3, 4),
+            make_move!(3, 3, 2, 3),
+            make_move!(3, 3, 4, 3),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_can_take() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(3, 3), Player::White, false),
+            Piece::new_bishop(make_pos!(3, 2), Player::Black),
+            Piece::new_bishop(make_pos!(3, 4), Player::Black),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(3, 3, 2, 2),
+            make_move!(3, 3, 4, 4),
+            make_move!(3, 3, 4, 2),
+            make_move!(3, 3, 2, 4),
+            make_move!(3, 3, 3, 2),
+            make_move!(3, 3, 3, 4),
+            make_move!(3, 3, 2, 3),
+            make_move!(3, 3, 4, 3),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_blocked() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(3, 3), Player::White, false),
+            Piece::new_bishop(make_pos!(3, 2), Player::White),
+            Piece::new_bishop(make_pos!(3, 4), Player::White),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(3, 3, 2, 2),
+            make_move!(3, 3, 4, 4),
+            make_move!(3, 3, 4, 2),
+            make_move!(3, 3, 2, 4),
+            make_move!(3, 3, 2, 3),
+            make_move!(3, 3, 4, 3),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_castles() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, true),
+            Piece::new_rook(make_pos!(0, 0), Player::White, true),
+            Piece::new_rook(make_pos!(0, 7), Player::White, true),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(0, 4, 0, 3),
+            make_move!(0, 4, 1, 3),
+            make_move!(0, 4, 1, 4),
+            make_move!(0, 4, 1, 5),
+            make_move!(0, 4, 0, 5),
+            make_move!(0, 4, 0, 2),
+            make_move!(0, 4, 0, 6),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_cant_castle_king_moved() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, false),
+            Piece::new_rook(make_pos!(0, 0), Player::White, true),
+            Piece::new_rook(make_pos!(0, 7), Player::White, true),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(0, 4, 0, 3),
+            make_move!(0, 4, 1, 3),
+            make_move!(0, 4, 1, 4),
+            make_move!(0, 4, 1, 5),
+            make_move!(0, 4, 0, 5),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_cant_castle_rook_moved() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, true),
+            Piece::new_rook(make_pos!(0, 0), Player::White, false),
+            Piece::new_rook(make_pos!(0, 7), Player::White, true),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(0, 4, 0, 3),
+            make_move!(0, 4, 1, 3),
+            make_move!(0, 4, 1, 4),
+            make_move!(0, 4, 1, 5),
+            make_move!(0, 4, 0, 5),
+            make_move!(0, 4, 0, 6),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_cant_castle_blocked() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, true),
+            Piece::new_rook(make_pos!(0, 0), Player::White, true),
+            Piece::new_knight(make_pos!(0, 1), Player::White),
+            Piece::new_knight(make_pos!(0, 6), Player::White),
+            Piece::new_rook(make_pos!(0, 7), Player::White, true),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        let mut expected_moves = vec![
+            make_move!(0, 4, 0, 3),
+            make_move!(0, 4, 1, 3),
+            make_move!(0, 4, 1, 4),
+            make_move!(0, 4, 1, 5),
+            make_move!(0, 4, 0, 5),
+        ];
+        test_get_moves(state, pos, &mut expected_moves);
+    }
+    #[test]
+    fn test_king_cant_castle_under_check() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, true),
+            Piece::new_rook(make_pos!(0, 0), Player::White, true),
+            Piece::new_rook(make_pos!(0, 7), Player::White, true),
+            Piece::new_rook(make_pos!(7, 4), Player::Black, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let pos = make_pos!(3, 3);
+        check_move_not_in_get_moves(&state, &pos, &make_move!(0, 4, 0, 2));
+        check_move_not_in_get_moves(&state, &pos, &make_move!(0, 4, 0, 6));
+    }
+    #[test]
+    fn test_is_promotion() {
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(6, 4), Player::White, false),
+            Piece::new_pawn(make_pos!(5, 5), Player::White, false),
+            Piece::new_rook(make_pos!(6, 6), Player::White, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        assert!(state.is_promotion_move(make_move!(6, 4, 7, 4)));
+        assert!(!state.is_promotion_move(make_move!(5, 5, 6, 5)));
+        assert!(!state.is_promotion_move(make_move!(6, 6, 7, 6)));
+    }
+    #[test]
+    fn test_is_promotion_black() {
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(2, 4), Player::Black, false),
+            Piece::new_pawn(make_pos!(1, 5), Player::Black, false),
+            Piece::new_rook(make_pos!(2, 6), Player::Black, false),
+        );
+        let state = GameState::from_board(board, Player::Black, None).unwrap();
+        assert!(state.is_promotion_move(make_move!(1, 4, 0, 4)));
+        assert!(!state.is_promotion_move(make_move!(2, 5, 1, 5)));
+        assert!(!state.is_promotion_move(make_move!(1, 6, 0, 6)));
+    }
+    #[test]
+    fn test_running() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, false),
+            Piece::new_king(make_pos!(7, 4), Player::Black, false),
+            Piece::new_rook(make_pos!(1, 2), Player::White, false),
+            Piece::new_rook(make_pos!(6, 5), Player::Black, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        assert!(!state.is_finished());
+    }
+    #[test]
+    fn test_draw() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, false),
+            Piece::new_king(make_pos!(2, 4), Player::Black, false),
+            Piece::new_pawn(make_pos!(1, 4), Player::Black, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        assert!(state.is_finished());
+        assert!(state.get_winner().is_none());
+    }
+    #[test]
+    fn test_checkmate() {
+        let board = make_board!(
+            Piece::new_king(make_pos!(0, 4), Player::White, false),
+            Piece::new_king(make_pos!(2, 4), Player::Black, false),
+            Piece::new_queen(make_pos!(1, 4), Player::Black),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        assert!(state.is_finished());
+        assert!(state.get_winner().is_some());
+        assert!(state.get_winner().unwrap() == Player::Black);
     }
 }
