@@ -1,3 +1,5 @@
+use std::result;
+
 use crate::{gamestate::GameState, PromotionType};
 pub use crate::player::Player;
 pub use crate::position::Position;
@@ -31,6 +33,13 @@ impl PieceData {
             position: new_position,
             player: new_player,
         }
+    }
+    pub fn get_position(&self) -> Position {
+        self.position
+    }
+
+    pub fn get_player(&self) -> Player {
+        self.player
     }
 }
 
@@ -115,10 +124,10 @@ impl Piece {
         }
     }
 
-    // /// Returns true if a pawn is in a circumstance where it can be taken
-    // /// en-passant by another pawn.
+    /// Returns true if a pawn is in a circumstance where it can be taken
+    /// en-passant by another pawn.
     // pub fn is_en_passantable(&self) -> bool {
-    //     if let Self::Pawn(_, _, result) = *self {
+    //     if let Self::Pawn(_, result) = *self {
     //         result
     //     } else {
     //         unreachable!("This method should be used on a pawn.")
@@ -131,6 +140,7 @@ impl Piece {
             Self::King(_, result) | Self::Rook(_, result) => result,
             _ => unreachable!("This method should be used on a king or a rook."),
         }
+
     }
     /// Checks if the pawn is about to make it's first move; if so - returns
     /// true.

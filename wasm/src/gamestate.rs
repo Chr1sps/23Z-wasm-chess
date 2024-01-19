@@ -1,4 +1,4 @@
-use crate::{piece::Piece, Move, Player, Position, PromotionType, PieceType};
+use crate::{piece::Piece, Move, Player, Position, PromotionType, PieceType, Game};
 
 type Field = Option<Piece>;
 type Board = Vec<Vec<Field>>;
@@ -24,6 +24,30 @@ macro_rules! make_board {
     }};
 }
 impl GameState {
+
+    pub fn update_en_passant(state: &GameState, r#move: &Move) -> Option<Position>{
+        let en_passant_square: Option<Position>;
+        // Sprawdź, czy ostatni ruch był wykonany przez pionka, który przesunął się o dwa pola do przodu
+        let (start_row, start_col) = r#move.get_current_position().as_tuple();
+        let (end_row, end_col) = r#move.get_end_position().as_tuple();
+        if let Some(Piece::Pawn(data, _)) = state.board[start_row as usize][start_col as usize] {
+            if (end_row as i32  - start_row as i32).abs() == 2 {
+                // Sprawdź, czy istnieje pionek przeciwnika, który może wykonać ruch "en passant"
+                for &col in &[end_col - 1, end_col + 1] {
+                    if let Some(Piece::Pawn(other_data, _)) = state.board[end_row as usize][col as usize] {
+                        if data.get_player() != other_data.get_player() {
+                            // Ustaw `en_passant_square` na pozycję pionka, który może być zniszczony
+                            en_passant_square = Some(Position::new(end_row, end_col).unwrap());
+                            return en_passant_square;
+                        }
+                    }
+                }
+            }
+        }
+        // Jeśli żadne z powyższych warunków nie zostało spełnione, ustaw `en_passant_square` na `None`
+        en_passant_square = None;
+        return en_passant_square;
+    }
     /// Generates the next state that would be the result of a given move and a
     /// given promotion. This method does NOT check the legality of a given
     /// move, but only performs it. If a promotion is specified, the moved
@@ -51,9 +75,11 @@ impl GameState {
                 Self {
                     board: new_board,
                     current_player: state.current_player.get_enemy(),
-                    en_passant_square: None,
+                    en_passant_square: GameState::update_en_passant(&state, &r#move),
                 }
     }
+
+
     /// Creates an initial chessboard state.
     pub fn init() -> Self {
         Self {
@@ -215,6 +241,22 @@ impl GameState {
     pub fn get_en_passant_square(&self) -> Option<&Position> {
         self.en_passant_square.as_ref()
     }
+    pub fn can_en_passant(game_state: &GameState, r#move: &Move) -> bool {
+        let (start_row, start_col) = r#move.get_current_position().as_tuple();
+        if let Some(Piece::Pawn(_, can_be_taken_en_passant)) = game_state.board[start_row as usize][start_col as usize] {
+            if can_be_taken_en_passant {
+                let (end_row, end_col) = r#move.get_end_position().as_tuple();
+                if (end_row as i32 - start_row as i32).abs() == 1 && (end_col as i32 - start_col as i32).abs() == 1 {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+
+
+
 }
 
 #[cfg(test)]
@@ -674,6 +716,20 @@ mod tests {
         // Sprawdź, czy en_passant_square jest None
         assert!(new_state.en_passant_square.is_none());
     }
+
+
+    #[test]
+    fn test_update_en_passant() {
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(2, 4), Player::Black, false),
+            Piece::new_pawn(make_pos!(4, 5), Player::White, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+        let new_move = make_move!(2, 4, 4, 4); 
+        let result = GameState::update_en_passant(&state, &new_move);
+        assert_eq!(result, Some(Position::new(4, 4).unwrap()));
+    }
+    
 
 
 
