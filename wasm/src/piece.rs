@@ -1,4 +1,4 @@
-use crate::gamestate::GameState;
+use crate::{gamestate::GameState, PromotionType};
 pub use crate::player::Player;
 pub use crate::position::Position;
 pub use crate::r#move::Move;
@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[repr(u8)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PieceType {
     Pawn,
     Knight,
@@ -51,6 +51,8 @@ pub enum Piece {
     King(PieceData, bool),
 }
 
+
+
 impl Piece {
     /// Creates a new pawn.
     pub fn new_pawn(position: Position, player: Player, first_move: bool) -> Self {
@@ -74,7 +76,7 @@ impl Piece {
     }
     /// Creates a new king.
     pub fn new_king(position: Position, player: Player, can_castle: bool) -> Self {
-        Self::Rook(PieceData::new(position, player), can_castle)
+        Self::King(PieceData::new(position, player), can_castle)
     }
 
     /// Returns the piece's player.
