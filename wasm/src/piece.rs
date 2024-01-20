@@ -177,7 +177,7 @@ impl Piece {
         for (row_shift, column_shift) in shifts {
             let new_column = (self.get_position().get_column() as i32 + column_shift) as u8;
             let new_row = (self.get_position().get_row() as i32 + row_shift) as u8;
-            if let Some(new_pos) = Position::new(new_column, new_row) {
+            if let Some(new_pos) = Position::new(new_row, new_column) {
                 if let Some(other_piece) = state.get_piece(new_pos) {
                     if other_piece.get_player() != self.get_player() {
                         result.push(Move::new(self.get_position(), new_pos));
@@ -218,6 +218,8 @@ impl Piece {
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
         match *self {
             Self::Pawn(_, first_move) => {
+                let (row, col) = self.get_position().as_tuple();
+
                 let idx: i8;
                 if self.get_player() == Player::White {
                     idx = 1;
@@ -226,7 +228,6 @@ impl Piece {
                 }
                 println!("first move: {}", first_move);
                 let mut result = vec![];
-                let (row, col) = self.get_position().as_tuple();
                 if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col) {
                     println!("to_pos: {:?}", to_pos);
                     if let None = state.get_piece(to_pos) {
@@ -241,39 +242,35 @@ impl Piece {
                         }
                     }
                 }
-                            
-                if let Some(to_pos) = Position::new((row as i8+ idx).try_into().unwrap(), col - 1) {
-                    if let Some(piece) = state.get_piece(to_pos) {
-                        if piece.get_player() != self.get_player() {
-                            result.push(Move::new(self.get_position(), to_pos));
-                        }
-                    }
-
-                }
-
-                if let Some(to_pos) = Position::new((row as i8+ idx).try_into().unwrap(), col + 1) {
-                    if let Some(piece) = state.get_piece(to_pos) {
-                        if piece.get_player() != self.get_player() {
-                            result.push(Move::new(self.get_position(), to_pos));
-                        }
-                    }
-
-                }
-
-                println!("row, column: {}, {}", row, col);
-                println!("{:?}", state.get_piece(Position::new(row, col - 1).unwrap()));
-                if let Some(piece) = state.get_piece(Position::new(row, col - 1).unwrap()) {
-                    println!("piece:");
-                    if state.get_en_passant_square() == Some(&Position::new(row, col - 1).unwrap()) {
-                        println!("en passant");
-                        if piece.get_player() != self.get_player() {
-                            println!("pushing");
-                            if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col - 1) {
+                if col >= 1 {           
+                    if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col - 1) {
+                        if let Some(piece) = state.get_piece(to_pos) {
+                            if piece.get_player() != self.get_player() {
                                 result.push(Move::new(self.get_position(), to_pos));
                             }
                         }
                     }
+                    if let Some(piece) = state.get_piece(Position::new(row, col - 1).unwrap()) {
+                        if state.get_en_passant_square() == Some(&Position::new(row, col - 1).unwrap()) {
+                            println!("en passant");
+                            if piece.get_player() != self.get_player() {
+                                println!("pushing");
+                                if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col - 1) {
+                                    result.push(Move::new(self.get_position(), to_pos));
+                                }
+                            }
+                        }
+                    }
                 }
+
+                    if let Some(to_pos) = Position::new((row as i8+ idx).try_into().unwrap(), col + 1) {
+                        if let Some(piece) = state.get_piece(to_pos) {
+                            if piece.get_player() != self.get_player() {
+                                result.push(Move::new(self.get_position(), to_pos));
+                            }
+                        }
+
+                    }
 
                 if let Some(piece) = state.get_piece(Position::new(row, col + 1).unwrap()) {
                     
