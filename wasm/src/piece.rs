@@ -303,28 +303,29 @@ impl Piece {
                         }
                     }
                 }
-
-                if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col + 1)
-                {
-                    if let Some(piece) = state.get_piece(to_pos) {
-                        if piece.get_player() != self.get_player() {
-                            result.push(Move::new(self.get_position(), to_pos));
-                        }
-                    }
-                }
-
-                if let Some(piece) = state.get_piece(Position::new(row, col + 1).unwrap()) {
-                    if state.get_en_passant_square() == Some(&Position::new(row, col + 1).unwrap())
+                if col <= 6 {
+                    if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col + 1)
                     {
-                        if piece.get_player() != self.get_player() {
-                            if let Some(to_pos) =
-                                Position::new((row as i8 + idx).try_into().unwrap(), col + 1)
-                            {
+                        if let Some(piece) = state.get_piece(to_pos) {
+                            if piece.get_player() != self.get_player() {
                                 result.push(Move::new(self.get_position(), to_pos));
                             }
                         }
                     }
-                }
+
+                    if let Some(piece) = state.get_piece(Position::new(row, col + 1).unwrap()) {
+                        if state.get_en_passant_square() == Some(&Position::new(row, col + 1).unwrap())
+                        {
+                            if piece.get_player() != self.get_player() {
+                                if let Some(to_pos) =
+                                    Position::new((row as i8 + idx).try_into().unwrap(), col + 1)
+                                {
+                                    result.push(Move::new(self.get_position(), to_pos));
+                                }
+                            }
+                        }
+                    }
+            }
 
                 result
             }

@@ -39,6 +39,7 @@
 				}
 				try {
 					console.log('trying a move');
+					console.log({ from_row, from_col, to_row, to_col });
 					game.make_move(from_row, from_col, to_row, to_col);
 					current_player =
 						current_player == wasm.Player.White
