@@ -10,38 +10,32 @@ import white_knight from '$lib/assets/white_knight.svg';
 import white_pawn from '$lib/assets/white_pawn.svg';
 import white_queen from '$lib/assets/white_queen.svg';
 import white_rook from '$lib/assets/white_rook.svg';
-export const enum PieceType {
-	Pawn,
-	Knight,
-	Bishop,
-	Rook,
-	Queen,
-	King
-}
-
-export const enum Player {
-	White,
-	Black
-}
-export type PieceData = [Player, PieceType];
+import * as wasm from 'wasm-chess';
 
 export const piece_map = {
-	[Player.White]: {
-		[PieceType.Pawn]: white_pawn,
-		[PieceType.Knight]: white_knight,
-		[PieceType.Bishop]: white_bishop,
-		[PieceType.Rook]: white_rook,
-		[PieceType.Queen]: white_queen,
-		[PieceType.King]: white_king
+	[wasm.Player.White]: {
+		[wasm.PieceType.Pawn]: white_pawn,
+		[wasm.PieceType.Knight]: white_knight,
+		[wasm.PieceType.Bishop]: white_bishop,
+		[wasm.PieceType.Rook]: white_rook,
+		[wasm.PieceType.Queen]: white_queen,
+		[wasm.PieceType.King]: white_king
 	},
-	[Player.Black]: {
-		[PieceType.Pawn]: black_pawn,
-		[PieceType.Knight]: black_knight,
-		[PieceType.Bishop]: black_bishop,
-		[PieceType.Rook]: black_rook,
-		[PieceType.Queen]: black_queen,
-		[PieceType.King]: black_king
+	[wasm.Player.Black]: {
+		[wasm.PieceType.Pawn]: black_pawn,
+		[wasm.PieceType.Knight]: black_knight,
+		[wasm.PieceType.Bishop]: black_bishop,
+		[wasm.PieceType.Rook]: black_rook,
+		[wasm.PieceType.Queen]: black_queen,
+		[wasm.PieceType.King]: black_king
 	}
+};
+
+export const promotion_map = {
+	[wasm.PromotionType.Knight]: wasm.PieceType.Knight,
+	[wasm.PromotionType.Bishop]: wasm.PieceType.Bishop,
+	[wasm.PromotionType.Rook]: wasm.PieceType.Rook,
+	[wasm.PromotionType.Queen]: wasm.PieceType.Queen
 };
 
 export type Position = [number, number];

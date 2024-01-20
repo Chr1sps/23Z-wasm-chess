@@ -1,21 +1,10 @@
-use wasm_bindgen::prelude::*;
-/// A struct representing a position on a chess board. It maps the range 0..=7
 /// to rows (1..=8) and columns (A-H).
-#[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
     row: u8,
     column: u8,
 }
 
-impl Position {
-    /// Returns a tuple of form (row, column).
-    pub fn as_tuple(&self) -> (u8, u8) {
-        (self.row, self.column)
-    }
-}
-
-#[wasm_bindgen]
 impl Position {
     /// Creates a new position if both the row and the column are within a
     /// range 0..=7, otherwise returns no value.
@@ -26,6 +15,10 @@ impl Position {
         } else {
             None
         }
+    }
+    /// Returns a tuple of form (row, column).
+    pub fn as_tuple(&self) -> (u8, u8) {
+        (self.row, self.column)
     }
     /// Returns the row of a position.
     pub fn get_row(&self) -> u8 {

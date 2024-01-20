@@ -1,22 +1,29 @@
 <script lang="ts">
-	// import type { PieceData } from '$lib/index.js';
-	import { PieceType, Player } from '$lib/index.js';
+	import { promotion_map } from '$lib/index.js';
+	import * as wasm from 'wasm-chess';
 
 	import Field from './Field.svelte';
-	export let player: Player = Player.White;
+	export let player: wasm.Player = wasm.Player.White;
+	export let hidden: boolean = false;
+
 	const promotion_types = [
-		PieceType.Knight,
-		PieceType.Bishop,
-		PieceType.Rook,
-		PieceType.Queen
+		wasm.PromotionType.Knight,
+		wasm.PromotionType.Bishop,
+		wasm.PromotionType.Rook,
+		wasm.PromotionType.Queen
 	];
 </script>
 
-<table>
+<table {hidden}>
 	<tbody>
 		{#each promotion_types.entries() as [index, promotion_type]}
 			<tr>
-				<Field is_black={!!(index % 2)} piece_data={[player, promotion_type]}
+				<Field
+					is_black={!!(index % 2)}
+					piece_data={wasm.PieceData.new(
+						player,
+						promotion_map[promotion_type]
+					)}
 				></Field></tr
 			>
 		{/each}</tbody

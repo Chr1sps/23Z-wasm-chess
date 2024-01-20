@@ -1,4 +1,4 @@
-use crate::{piece::Piece, Move, Player, Position, PromotionType, PieceType, Game};
+use crate::{piece::Piece, player::get_opponent, Move, PieceType, Player, Position, PromotionType};
 
 type Field = Option<Piece>;
 type Board = Vec<Vec<Field>>;
@@ -24,17 +24,18 @@ macro_rules! make_board {
     }};
 }
 impl GameState {
-
-    pub fn update_en_passant(state: &GameState, r#move: &Move) -> Option<Position>{
+    pub fn update_en_passant(state: &GameState, r#move: &Move) -> Option<Position> {
         let en_passant_square: Option<Position>;
         // Sprawdź, czy ostatni ruch był wykonany przez pionka, który przesunął się o dwa pola do przodu
         let (start_row, start_col) = r#move.get_current_position().as_tuple();
         let (end_row, end_col) = r#move.get_end_position().as_tuple();
         if let Some(Piece::Pawn(data, _)) = state.board[start_row as usize][start_col as usize] {
-            if (end_row as i32  - start_row as i32).abs() == 2 {
+            if (end_row as i32 - start_row as i32).abs() == 2 {
                 // Sprawdź, czy istnieje pionek przeciwnika, który może wykonać ruch "en passant"
                 for &col in &[end_col - 1, end_col + 1] {
-                    if let Some(Piece::Pawn(other_data, _)) = state.board[end_row as usize][col as usize] {
+                    if let Some(Piece::Pawn(other_data, _)) =
+                        state.board[end_row as usize][col as usize]
+                    {
                         if data.get_player() != other_data.get_player() {
                             // Ustaw `en_passant_square` na pozycję pionka, który może być zniszczony
                             en_passant_square = Some(Position::new(end_row, end_col).unwrap());
@@ -57,30 +58,35 @@ impl GameState {
         r#move: Move,
         promotion: Option<PromotionType>,
     ) -> Self {
-                let mut new_board = state.board.clone();
-                let (start_row, start_col) = r#move.get_current_position().as_tuple();
-                let (end_row, end_col) = r#move.get_end_position().as_tuple();
-                let moved_piece = new_board[start_row as usize][start_col as usize].take();
-                new_board[end_row as usize][end_col as usize] = moved_piece;
-
-
-                if let Some(promotion_type) = promotion {
-                    let (row, col) = r#move.get_end_position().as_tuple();
-                    let promoted_piece = match promotion_type {
-                        PromotionType::Knight => Piece::new_knight(Position::new(row, col).unwrap(), state.current_player),
-                        PromotionType::Bishop => Piece::new_bishop(Position::new(row, col).unwrap(), state.current_player),
-                        PromotionType::Rook => Piece::new_rook(Position::new(row, col).unwrap(), state.current_player, true),
-                        PromotionType::Queen => Piece::new_queen(Position::new(row, col).unwrap(), state.current_player),
-                    };
-                    new_board[row as usize][col as usize] = Some(promoted_piece);
+        let mut new_board = state.board.clone();
+        let (start_row, start_col) = r#move.get_current_position().as_tuple();
+        let (end_row, end_col) = r#move.get_end_position().as_tuple();
+        let moved_piece = new_board[start_row as usize][start_col as usize].take();
+        new_board[end_row as usize][end_col as usize] = moved_piece;
+        if let Some(promotion_type) = promotion {
+            let (row, col) = r#move.get_end_position().as_tuple();
+            let promoted_piece = match promotion_type {
+                PromotionType::Knight => {
+                    Piece::new_knight(Position::new(row, col).unwrap(), state.current_player)
                 }
-                Self {
-                    board: new_board,
-                    current_player: state.current_player.get_enemy(),
-                    en_passant_square: GameState::update_en_passant(&state, &r#move),
+                PromotionType::Bishop => {
+                    Piece::new_bishop(Position::new(row, col).unwrap(), state.current_player)
                 }
+                PromotionType::Rook => {
+                    Piece::new_rook(Position::new(row, col).unwrap(), state.current_player, true)
+                }
+                PromotionType::Queen => {
+                    Piece::new_queen(Position::new(row, col).unwrap(), state.current_player)
+                }
+            };
+            new_board[row as usize][col as usize] = Some(promoted_piece);
+        }
+        Self {
+            board: new_board,
+            current_player: get_opponent(state.current_player),
+            en_passant_square: GameState::update_en_passant(&state, &r#move),
+        }
     }
-
 
     /// Creates an initial chessboard state.
     pub fn init() -> Self {
@@ -102,14 +108,15 @@ impl GameState {
                 Piece::new_pawn(Position::new(1, 5).unwrap(), Player::White, true,),
                 Piece::new_pawn(Position::new(1, 6).unwrap(), Player::White, true,),
                 Piece::new_pawn(Position::new(1, 7).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 0).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 1).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 2).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 3).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 4).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 5).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 6).unwrap(), Player::White, true,),
-                Piece::new_pawn(Position::new(6, 7).unwrap(), Player::White, true,),
+                Piece::new_pawn(Position::new(6, 0).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 1).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 2).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 3).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 4).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 5).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 6).unwrap(), Player::Black, true,),
+                Piece::new_pawn(Position::new(6, 7).unwrap(), Player::Black, true,),
+                Piece::new_rook(Position::new(7, 0).unwrap(), Player::Black, true,),
                 Piece::new_knight(Position::new(7, 1).unwrap(), Player::Black,),
                 Piece::new_bishop(Position::new(7, 2).unwrap(), Player::Black,),
                 Piece::new_queen(Position::new(7, 3).unwrap(), Player::Black,),
@@ -190,7 +197,8 @@ impl GameState {
                 field
                     .as_ref()
                     .map(|piece| {
-                        piece.get_player() == self.current_player && (piece.get_type() == PieceType::King)
+                        piece.get_player() == self.current_player
+                            && (piece.get_type() == PieceType::King)
                     })
                     .unwrap_or(false)
             })
@@ -206,7 +214,7 @@ impl GameState {
     /// returns None.
     pub fn get_winner(&self) -> Option<Player> {
         if self.is_checked() {
-            Some(self.current_player.get_enemy())
+            Some(get_opponent(self.current_player))
         } else {
             None
         }
@@ -229,11 +237,11 @@ impl GameState {
     }
     /// Returns true if a move would result in a promotion of a pawn.
     pub fn is_promotion_move(&self, r#move: Move) -> bool {
-        let (start_row, start_col) = r#move.get_current_position().as_tuple();
-        let (end_row, col) = r#move.get_end_position().as_tuple();
-        let moved_piece = &self.board[start_row as usize][start_col as usize];
+        let end_pos = r#move.get_end_position();
+        let (end_row, col) = end_pos.as_tuple();
+        let moved_piece = &self.board[end_row as usize][col as usize];
         if let Some(Piece::Pawn(_, _)) = moved_piece {
-            self.is_end_row(r#move.get_end_position())
+            self.is_end_row(end_pos)
         } else {
             false
         }
@@ -243,20 +251,20 @@ impl GameState {
     }
     pub fn can_en_passant(game_state: &GameState, r#move: &Move) -> bool {
         let (start_row, start_col) = r#move.get_current_position().as_tuple();
-        if let Some(Piece::Pawn(_, can_be_taken_en_passant)) = game_state.board[start_row as usize][start_col as usize] {
+        if let Some(Piece::Pawn(_, can_be_taken_en_passant)) =
+            game_state.board[start_row as usize][start_col as usize]
+        {
             if can_be_taken_en_passant {
                 let (end_row, end_col) = r#move.get_end_position().as_tuple();
-                if (end_row as i32 - start_row as i32).abs() == 1 && (end_col as i32 - start_col as i32).abs() == 1 {
+                if (end_row as i32 - start_row as i32).abs() == 1
+                    && (end_col as i32 - start_col as i32).abs() == 1
+                {
                     return true;
                 }
             }
         }
         false
     }
-
-
-
-
 }
 
 #[cfg(test)]
@@ -334,7 +342,6 @@ mod tests {
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(4, 3);
         let mut expected_moves = vec![make_move!(4, 3, 5, 3), make_move!(4, 3, 5, 4)];
-        println!("{:?}", expected_moves);
         test_get_moves(state, pos, &mut expected_moves);
     }
     #[test]
@@ -344,15 +351,14 @@ mod tests {
             Piece::new_pawn(make_pos!(4, 5), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
-        let new_move = make_move!(2, 4, 4, 4); 
+        let new_move = make_move!(2, 4, 4, 4);
         let new_state = GameState::transform_state(&state, new_move, None);
         println!("{:?}", state.get_piece(Position::new(4, 4).unwrap()));
         let result = GameState::update_en_passant(&state, &new_move);
         let mut expected_moves = vec![make_move!(4, 5, 3, 4), make_move!(4, 5, 3, 5)];
         let pos = make_pos!(4, 5);
         test_get_moves(new_state, pos, &mut expected_moves);
-    
-     }
+    }
     #[test]
     fn test_knight_moves_center() {
         let board = make_board!(Piece::new_knight(make_pos!(4, 3), Player::White),);
@@ -684,31 +690,26 @@ mod tests {
 
     #[test]
     fn test_transform_state() {
-        let board = make_board!(
-            Piece::new_bishop(make_pos!(2, 2), Player::Black),
-        );
+        let board = make_board!(Piece::new_bishop(make_pos!(2, 2), Player::Black),);
         let state = GameState::from_board(board, Player::White, None).unwrap();
-        let new_move = make_move!(2, 2, 3, 3); 
-        let promotion = None; 
+        let new_move = make_move!(2, 2, 3, 3);
+        let promotion = None;
 
         let new_state = GameState::transform_state(&state, new_move, promotion);
 
-    
         assert!(new_state.board[2][2].is_none());
         assert!(matches!(new_state.board[3][3], Some(Piece::Bishop(_))));
 
-        assert_eq!(new_state.current_player, state.current_player.get_enemy());
+        assert_eq!(new_state.current_player, get_opponent(state.current_player));
 
         assert!(new_state.en_passant_square.is_none());
     }
 
     #[test]
     fn test_transform_state_with_promotion() {
-        let board = make_board!(
-            Piece::new_bishop(make_pos!(2, 2), Player::Black),
-        );
+        let board = make_board!(Piece::new_bishop(make_pos!(2, 2), Player::Black),);
         let state = GameState::from_board(board, Player::White, None).unwrap();
-        let new_move = make_move!(2, 2, 3, 3); 
+        let new_move = make_move!(2, 2, 3, 3);
         let promotion = Some(PromotionType::Knight);
 
         let new_state = GameState::transform_state(&state, new_move, promotion);
@@ -718,12 +719,11 @@ mod tests {
         assert!(matches!(new_state.board[3][3], Some(Piece::Knight(_))));
 
         // Sprawdź, czy aktualny gracz został zmieniony
-        assert_eq!(new_state.current_player, state.current_player.get_enemy());
+        assert_eq!(new_state.current_player, get_opponent(state.current_player));
 
         // Sprawdź, czy en_passant_square jest None
         assert!(new_state.en_passant_square.is_none());
     }
-
 
     #[test]
     fn test_update_en_passant() {
@@ -732,15 +732,10 @@ mod tests {
             Piece::new_pawn(make_pos!(4, 5), Player::White, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
-        let new_move = make_move!(2, 4, 4, 4); 
+        let new_move = make_move!(2, 4, 4, 4);
         let result = GameState::update_en_passant(&state, &new_move);
         assert_eq!(result, Some(Position::new(4, 4).unwrap()));
     }
-    
-
-
-
-
 
     #[test]
     fn test_king_castles() {
@@ -875,7 +870,7 @@ mod tests {
             Piece::new_pawn(make_pos!(1, 4), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
-        // assert!(state.is_finished());
+        assert!(state.is_finished());
         assert!(state.get_winner().is_none());
     }
     #[test]
@@ -886,8 +881,8 @@ mod tests {
             Piece::new_queen(make_pos!(1, 4), Player::Black),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
-        // assert!(state.is_finished());
+        assert!(state.is_finished());
         assert!(state.get_winner().is_some());
         assert!(state.get_winner().unwrap() == Player::Black);
     }
- }
+}

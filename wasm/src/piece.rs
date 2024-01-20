@@ -1,6 +1,4 @@
-use std::result;
-
-use crate::{gamestate::GameState, PromotionType};
+use crate::gamestate::GameState;
 pub use crate::player::Player;
 pub use crate::position::Position;
 pub use crate::r#move::Move;
@@ -9,7 +7,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[repr(u8)]
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum PieceType {
     Pawn,
     Knight,
@@ -22,14 +20,14 @@ pub enum PieceType {
 /// This struct contains data that is present in every Piece enum variant,
 /// namely the position of a piece and which player does it belong to.
 #[derive(Clone, Copy, Debug)]
-pub struct PieceData {
+pub struct SharedData {
     position: Position,
     player: Player,
 }
 
-impl PieceData {
-    pub fn new(new_position: Position, new_player: Player) -> PieceData {
-        PieceData {
+impl SharedData {
+    pub fn new(new_position: Position, new_player: Player) -> SharedData {
+        SharedData {
             position: new_position,
             player: new_player,
         }
@@ -48,44 +46,42 @@ pub enum Piece {
     /// The pawn variant; contains a field which indicates if a pawn is yet to
     /// make it's first move, and if it's therefore able to make a move forward
     /// by two squares.
-    Pawn(PieceData, bool),
-    Knight(PieceData),
-    Bishop(PieceData),
+    Pawn(SharedData, bool),
+    Knight(SharedData),
+    Bishop(SharedData),
     /// The rook variant; contains a field which indicates if the rook can be
     /// used for castling.
-    Rook(PieceData, bool),
-    Queen(PieceData),
+    Rook(SharedData, bool),
+    Queen(SharedData),
     /// The king variant; contains a field which indicates if the rook can be
     /// used for castling.
-    King(PieceData, bool),
+    King(SharedData, bool),
 }
-
-
 
 impl Piece {
     /// Creates a new pawn.
     pub fn new_pawn(position: Position, player: Player, first_move: bool) -> Self {
-        Self::Pawn(PieceData::new(position, player), first_move)
+        Self::Pawn(SharedData::new(position, player), first_move)
     }
     /// Creates a new knight.
     pub fn new_knight(position: Position, player: Player) -> Self {
-        Self::Knight(PieceData::new(position, player))
+        Self::Knight(SharedData::new(position, player))
     }
     /// Creates a new bishop.
     pub fn new_bishop(position: Position, player: Player) -> Self {
-        Self::Bishop(PieceData::new(position, player))
+        Self::Bishop(SharedData::new(position, player))
     }
     /// Creates a new rook.
     pub fn new_rook(position: Position, player: Player, can_castle: bool) -> Self {
-        Self::Rook(PieceData::new(position, player), can_castle)
+        Self::Rook(SharedData::new(position, player), can_castle)
     }
     /// Creates a new queen.
     pub fn new_queen(position: Position, player: Player) -> Self {
-        Self::Queen(PieceData::new(position, player))
+        Self::Queen(SharedData::new(position, player))
     }
     /// Creates a new king.
     pub fn new_king(position: Position, player: Player, can_castle: bool) -> Self {
-        Self::King(PieceData::new(position, player), can_castle)
+        Self::King(SharedData::new(position, player), can_castle)
     }
 
     /// Returns the piece's player.
@@ -123,6 +119,44 @@ impl Piece {
             Self::King(_, _) => PieceType::King,
         }
     }
+    pub fn get_data(&self) -> PieceData {
+        let player = match *self {
+            Self::Pawn(
+                SharedData {
+                    position: _,
+                    player,
+                },
+                _,
+            )
+            | Self::Knight(SharedData {
+                position: _,
+                player,
+            })
+            | Self::Bishop(SharedData {
+                position: _,
+                player,
+            })
+            | Self::Rook(
+                SharedData {
+                    position: _,
+                    player,
+                },
+                _,
+            )
+            | Self::Queen(SharedData {
+                position: _,
+                player,
+            })
+            | Self::King(
+                SharedData {
+                    position: _,
+                    player,
+                },
+                _,
+            ) => player,
+        };
+        PieceData::new(player, self.get_type())
+    }
 
     /// Returns true if a pawn is in a circumstance where it can be taken
     /// en-passant by another pawn.
@@ -140,7 +174,6 @@ impl Piece {
             Self::King(_, result) | Self::Rook(_, result) => result,
             _ => unreachable!("This method should be used on a king or a rook."),
         }
-
     }
     /// Checks if the pawn is about to make it's first move; if so - returns
     /// true.
@@ -192,7 +225,7 @@ impl Piece {
     fn check_castle_move(&self, state: &GameState, right_side: bool) -> Option<Move> {
         let (row, _) = self.get_position().as_tuple();
         if let Some(Self::Rook(
-            PieceData {
+            SharedData {
                 position: _,
                 player,
             },
@@ -236,14 +269,18 @@ impl Piece {
                     }
                 }
                 if first_move {
-                    if let Some(to_pos) = Position::new((row as i8+ 2 * idx).try_into().unwrap(), col) {
+                    if let Some(to_pos) =
+                        Position::new((row as i8 + 2 * idx).try_into().unwrap(), col)
+                    {
                         if let None = state.get_piece(to_pos) {
                             result.push(Move::new(self.get_position(), to_pos));
                         }
                     }
                 }
-                if col >= 1 {           
-                    if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col - 1) {
+                if col >= 1 {
+                    if let Some(to_pos) =
+                        Position::new((row as i8 + idx).try_into().unwrap(), col - 1)
+                    {
                         if let Some(piece) = state.get_piece(to_pos) {
                             if piece.get_player() != self.get_player() {
                                 result.push(Move::new(self.get_position(), to_pos));
@@ -251,11 +288,15 @@ impl Piece {
                         }
                     }
                     if let Some(piece) = state.get_piece(Position::new(row, col - 1).unwrap()) {
-                        if state.get_en_passant_square() == Some(&Position::new(row, col - 1).unwrap()) {
+                        if state.get_en_passant_square()
+                            == Some(&Position::new(row, col - 1).unwrap())
+                        {
                             println!("en passant");
                             if piece.get_player() != self.get_player() {
                                 println!("pushing");
-                                if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col - 1) {
+                                if let Some(to_pos) =
+                                    Position::new((row as i8 + idx).try_into().unwrap(), col - 1)
+                                {
                                     result.push(Move::new(self.get_position(), to_pos));
                                 }
                             }
@@ -263,33 +304,31 @@ impl Piece {
                     }
                 }
 
-                    if let Some(to_pos) = Position::new((row as i8+ idx).try_into().unwrap(), col + 1) {
-                        if let Some(piece) = state.get_piece(to_pos) {
-                            if piece.get_player() != self.get_player() {
-                                result.push(Move::new(self.get_position(), to_pos));
-                            }
+                if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col + 1)
+                {
+                    if let Some(piece) = state.get_piece(to_pos) {
+                        if piece.get_player() != self.get_player() {
+                            result.push(Move::new(self.get_position(), to_pos));
                         }
-
                     }
+                }
 
                 if let Some(piece) = state.get_piece(Position::new(row, col + 1).unwrap()) {
-                    
-                    if state.get_en_passant_square() == Some(&Position::new(row, col + 1).unwrap()) {
-                        
+                    if state.get_en_passant_square() == Some(&Position::new(row, col + 1).unwrap())
+                    {
                         if piece.get_player() != self.get_player() {
-                            
-                            if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col + 1) {
+                            if let Some(to_pos) =
+                                Position::new((row as i8 + idx).try_into().unwrap(), col + 1)
+                            {
                                 result.push(Move::new(self.get_position(), to_pos));
                             }
                         }
                     }
                 }
 
-                
-            
                 result
             }
-            Self::Knight(PieceData {
+            Self::Knight(SharedData {
                 position: _,
                 player: _,
             }) => {
@@ -331,5 +370,25 @@ impl Piece {
                 result
             }
         }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Clone, Copy)]
+pub struct PieceData {
+    player: Player,
+    piece_type: PieceType,
+}
+
+#[wasm_bindgen]
+impl PieceData {
+    pub fn new(player: Player, piece_type: PieceType) -> Self {
+        Self { player, piece_type }
+    }
+    pub fn get_player(&self) -> Player {
+        self.player
+    }
+    pub fn get_type(&self) -> PieceType {
+        self.piece_type
     }
 }

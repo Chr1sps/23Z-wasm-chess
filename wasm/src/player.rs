@@ -7,11 +7,10 @@ pub enum Player {
     White,
 }
 
-impl Player {
-    pub fn get_enemy(&self) -> Self {
-        match self {
-            Player::White => Player::Black,
-            Player::Black => Player::White,
-        }
+#[wasm_bindgen]
+pub fn get_opponent(player: Player) -> Player {
+    match player {
+        Player::White => Player::Black,
+        Player::Black => Player::White,
     }
 }

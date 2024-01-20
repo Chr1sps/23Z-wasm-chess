@@ -1,10 +1,10 @@
 <script lang="ts">
 	// export let piece: PieceType | null;
-	import type { PieceData, Position } from '$lib/index';
-	import { piece_map } from '$lib/index';
+	import { piece_map, type Position } from '$lib/index';
 	import { createEventDispatcher } from 'svelte';
+	import type * as wasm from 'wasm-chess';
 	export let is_black: boolean;
-	export let piece_data: PieceData | null = null;
+	export let piece_data: wasm.PieceData | null = null;
 	export let is_selected = false;
 	export let position: Position | null = null;
 	const dispatch = createEventDispatcher<{ click: null | Position }>();
@@ -15,7 +15,8 @@
 
 <td class={is_black ? 'black_square' : 'white_square'} on:click={handleClick}>
 	{#if piece_data !== null}
-		{@const [player, piece_type] = piece_data}
+		{@const player = piece_data.get_player()}
+		{@const piece_type = piece_data.get_type()}
 		<svg
 			class="svg-overlay"
 			xmlns="http://www.w3.org/2000/svg"
