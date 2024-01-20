@@ -1,8 +1,9 @@
 <script lang="ts">
 	// export let piece: PieceType | null;
 	import { piece_map, type Position } from '$lib/index';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import type * as wasm from 'wasm-chess';
+	import init from 'wasm-chess';
 	export let is_black: boolean;
 	export let piece_data: wasm.PieceData | null = null;
 	export let is_selected = false;
@@ -11,6 +12,9 @@
 	const handleClick = () => {
 		dispatch('click', position);
 	};
+	onMount(async () => {
+		await init();
+	});
 </script>
 
 <td class={is_black ? 'black_square' : 'white_square'} on:click={handleClick}>

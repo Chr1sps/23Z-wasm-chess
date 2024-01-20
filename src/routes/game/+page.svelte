@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Position } from '$lib';
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import init, * as wasm from 'wasm-chess';
 	import Field from './Field.svelte';
 	import PromotionSelector from './PromotionSelector.svelte';
@@ -8,50 +8,59 @@
 	let rows = [8, 7, 6, 5, 4, 3, 2, 1];
 	let columns = 'ABCDEFGH';
 	let current_player = wasm.Player.White;
-	let is_promotion = false;
+	let choosing_promotion = false;
+	let promotion_type: wasm.PromotionType | undefined = undefined;
 	let game: wasm.Game;
 	let possible_moves: Array<Position> = [];
-	let selected_pos: [number, number] | null = null;
+	let selected_pos: Position | null = null;
 	let new_selected: Position;
 
-	$: console.log({ possible_moves });
-	$: console.log({ selected_pos });
+	$: console.log(selected_pos);
 	$: possible_moves = selected_pos
 		? game.get_moves(selected_pos[0], selected_pos[1]).map((js_pos) => {
 				return [js_pos.row, js_pos.col];
 			})
 		: [];
 
-	const handleFieldClick = async (event: CustomEvent<Position | null>) => {
+	const getPromotionType = async () => {
+		while (promotion_type === undefined) {}
+		return promotion_type;
+	};
+
+	const handleFieldClick = (event: CustomEvent<Position | null>) => {
 		new_selected = event.detail!;
 		let [row, col] = new_selected;
 
 		console.log('New selected: %d,%d', row, col);
 		if (selected_pos === null) {
-			selected_pos = new_selected;
+			let piece_data = game.get_piece_data(row, col);
+			if (piece_data !== undefined) {
+				let player = piece_data.get_player();
+				if (player === current_player) {
+					selected_pos = new_selected;
+				}
+			}
 		} else {
 			if (!(selected_pos[0] === row && selected_pos[1] === col)) {
 				console.log('creating a move');
 				let [from_row, from_col] = selected_pos;
 				let [to_row, to_col] = new_selected;
-				if (game.is_promotion_move(from_row, from_col, to_row, to_col)) {
-					console.log('promotion');
-				}
-				try {
-					console.log('trying a move');
-					console.log({ from_row, from_col, to_row, to_col });
-					game.make_move(from_row, from_col, to_row, to_col);
-					current_player =
-						current_player == wasm.Player.White
-							? wasm.Player.Black
-							: wasm.Player.White;
-					console.log('move complete');
-				} catch (error) {
-					console.log('move incomplete');
+				if (!game.is_promotion_move(from_row, from_col, to_row, to_col)) {
+					try {
+						console.log('trying a move');
+						game.make_move(from_row, from_col, to_row, to_col, promotion_type);
+						current_player = wasm.get_opponent(current_player);
+						console.log('move complete');
+					} catch (error) {
+						console.log(error);
+					}
+				} else {
+					choosing_promotion = true;
 				}
 			}
 			selected_pos = null;
-			await tick();
+			rows = rows;
+			columns = columns;
 		}
 	};
 	const check_selected = (
@@ -98,7 +107,7 @@
 							<Field
 								on:click={handleFieldClick}
 								is_black={(row_index + col_index) % 2 === 0}
-								piece_data={game.get_piece_data(row_index, col_index)}
+								piece_data={game.get_piece_data(row_index, col_index) ?? null}
 								is_selected={check_selected(
 									[row_index, col_index],
 									selected_pos
@@ -120,7 +129,7 @@
 		</tbody>
 	</table>
 	<div class="gap"></div>
-	{#if is_promotion}
+	{#if choosing_promotion}
 		<PromotionSelector player={current_player} />
 	{:else}
 		<div class="filler"></div>
