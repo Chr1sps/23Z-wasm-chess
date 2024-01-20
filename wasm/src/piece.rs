@@ -156,6 +156,19 @@ impl Piece {
             ) => player,
         };
         PieceData::new(player, self.get_type())
+
+
+    }
+
+    pub fn set_position(&mut self, new_position: &Position) {
+        match *self {
+            Self::Pawn(ref mut data, _)
+            | Self::Knight(ref mut data)
+            | Self::Bishop(ref mut data)
+            | Self::Rook(ref mut data, _)
+            | Self::Queen(ref mut data)
+            | Self::King(ref mut data, _) => data.position = *new_position,
+        }
     }
 
     /// Returns true if a pawn is in a circumstance where it can be taken
@@ -252,13 +265,16 @@ impl Piece {
         match *self {
             Self::Pawn(_, first_move) => {
                 let (row, col) = self.get_position().as_tuple();
-
+                println!("row: {}", row);
+                println!("col: {}", col);
+                println!("{:?}", self.get_player());
                 let idx: i8;
                 if self.get_player() == Player::White {
                     idx = 1;
                 } else {
                     idx = -1;
                 }
+                println!("idx: {}", idx);
                 println!("first move: {}", first_move);
                 let mut result = vec![];
                 if let Some(to_pos) = Position::new((row as i8 + idx).try_into().unwrap(), col) {

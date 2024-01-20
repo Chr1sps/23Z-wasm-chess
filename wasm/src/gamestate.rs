@@ -61,8 +61,19 @@ impl GameState {
         let mut new_board = state.board.clone();
         let (start_row, start_col) = r#move.get_current_position().as_tuple();
         let (end_row, end_col) = r#move.get_end_position().as_tuple();
-        let moved_piece = new_board[start_row as usize][start_col as usize].take();
-        new_board[end_row as usize][end_col as usize] = moved_piece;
+
+        let mut moved_piece = new_board[start_row as usize][start_col as usize].take().unwrap();
+        moved_piece.set_position(&Position::new(end_row, end_col).unwrap());
+
+        new_board[end_row as usize][end_col as usize] = Some(moved_piece);
+
+        if let Some(Piece::Pawn(_, first_move)) = new_board[end_row as usize][end_col as usize] {
+            if first_move {
+                new_board[end_row as usize][end_col as usize] =
+                    Some(Piece::new_pawn(Position::new(end_row, end_col).unwrap(), state.current_player, false));
+            }
+        }
+        
         if let Some(promotion_type) = promotion {
             let (row, col) = r#move.get_end_position().as_tuple();
             let promoted_piece = match promotion_type {
@@ -150,6 +161,7 @@ impl GameState {
     /// (returns an empty vector if there is no piece there).
     pub fn get_moves(&self, position: Position) -> Vec<Move> {
         let (row, col) = position.as_tuple();
+        println!("row: {}, col: {}", row, col);
         match &self.board[row as usize][col as usize] {
             Some(piece) => piece.get_moves(&self),
             None => vec![],
@@ -885,5 +897,26 @@ mod tests {
         // assert!(state.is_finished());
         assert!(state.get_winner().is_some());
         assert!(state.get_winner().unwrap() == Player::Black);
+    }
+
+    #[test]
+    fn test_pawn_move() {
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(1, 6), Player::White, false),
+            Piece::new_pawn(make_pos!(6, 5), Player::Black, false),
+        );
+        let state = GameState::from_board(board, Player::White, None).unwrap();
+
+        let new_move = make_move!(1, 6, 3, 6);
+
+        let new_state = GameState::transform_state(&state, new_move, None);
+
+        let new_move2 = make_move!(6, 5, 4, 5);
+
+        let new_state2 = GameState::transform_state(&new_state, new_move2, None);
+
+        let pos = make_pos!(3, 6);
+        let mut expected_moves = vec![make_move!(3, 6, 4, 6), make_move!(3, 6, 4, 5)];
+        test_get_moves(new_state2, pos, &mut expected_moves);
     }
 }
