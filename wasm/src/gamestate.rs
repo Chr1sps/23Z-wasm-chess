@@ -1,4 +1,8 @@
-use crate::{piece::Piece, player::get_opponent, Move, PieceType, Player, Position, PromotionType};
+use crate::{
+    piece::{Piece, SharedData},
+    player::get_opponent,
+    Game, Move, PieceType, Player, Position, PromotionType,
+};
 
 type Field = Option<Piece>;
 type Board = Vec<Vec<Field>>;
@@ -26,27 +30,15 @@ macro_rules! make_board {
 impl GameState {
     pub fn update_en_passant(state: &GameState, r#move: &Move) -> Option<Position> {
         let en_passant_square: Option<Position>;
-        // Sprawdź, czy ostatni ruch był wykonany przez pionka, który przesunął się o dwa pola do przodu
+        // Check if the last move has been made by a pawn which moved two
+        // squares forward.
         let (start_row, start_col) = r#move.get_current_position().as_tuple();
-        let (end_row, end_col) = r#move.get_end_position().as_tuple();
-        if let Some(Piece::Pawn(data, _)) = state.board[start_row as usize][start_col as usize] {
-            if (end_row as i32 - start_row as i32).abs() == 2 {
-                // Sprawdź, czy istnieje pionek przeciwnika, który może wykonać ruch "en passant"
-                for &col in &[end_col - 1, end_col + 1] {
-                    if let Some(Piece::Pawn(other_data, _)) =
-                        state.board[end_row as usize][col as usize]
-                    {
-                        if data.get_player() != other_data.get_player() {
-                            // Ustaw `en_passant_square` na pozycję pionka, który może być zniszczony
-                            en_passant_square = Some(Position::new(end_row, end_col).unwrap());
-                            return en_passant_square;
-                        }
-                    }
-                }
-            }
+        let end_pos = r#move.get_end_position();
+        if let Some(Piece::Pawn(_, _)) = state.board[start_row as usize][start_col as usize] {
+            en_passant_square = Some(end_pos);
+        } else {
+            en_passant_square = None;
         }
-        // Jeśli żadne z powyższych warunków nie zostało spełnione, ustaw `en_passant_square` na `None`
-        en_passant_square = None;
         return en_passant_square;
     }
     /// Generates the next state that would be the result of a given move and a
@@ -62,7 +54,8 @@ impl GameState {
         let (start_row, start_col) = r#move.get_current_position().as_tuple();
         let (end_row, end_col) = r#move.get_end_position().as_tuple();
         let moved_piece = new_board[start_row as usize][start_col as usize].take();
-        new_board[end_row as usize][end_col as usize] = moved_piece;
+        new_board[end_row as usize][end_col as usize] =
+            moved_piece.map(move |piece| piece.shift(r#move.get_end_position()));
         if let Some(promotion_type) = promotion {
             let (row, col) = r#move.get_end_position().as_tuple();
             let promoted_piece = match promotion_type {
@@ -88,6 +81,13 @@ impl GameState {
         }
     }
 
+    pub fn switch_player(&self) -> Self {
+        Self {
+            board: self.board.clone(),
+            current_player: get_opponent(self.current_player),
+            en_passant_square: self.en_passant_square,
+        }
+    }
     /// Creates an initial chessboard state.
     pub fn init() -> Self {
         Self {
@@ -169,13 +169,12 @@ impl GameState {
         result
     }
 
-    /// Returns all the legal moves that can be made by the other player.
-    fn get_all_opponent_moves(&self) -> Vec<Move> {
+    fn get_all_moves_unchecked(&self) -> Vec<Move> {
         let mut result = vec![];
         for field in self.board.iter().flatten() {
             if let Some(piece) = field {
-                if piece.get_player() != self.current_player {
-                    result.append(&mut piece.get_moves(&self));
+                if piece.get_player() == self.current_player {
+                    result.append(&mut piece.get_unchecked_moves(&self));
                 }
             }
         }
@@ -187,27 +186,28 @@ impl GameState {
         self.get_all_moves().is_empty()
     }
 
-    /// Returns true if the current player is under check.
-    fn is_checked(&self) -> bool {
-        let king_position = self
-            .board
+    fn find_current_players_king(&self) -> Position {
+        self.board
             .iter()
             .flatten()
-            .find(|field| {
-                field
-                    .as_ref()
-                    .map(|piece| {
-                        piece.get_player() == self.current_player
-                            && (piece.get_type() == PieceType::King)
-                    })
-                    .unwrap_or(false)
+            .find(|piece| {
+                if let Some(Piece::King(_, _)) = piece {
+                    piece.unwrap().get_player() == self.current_player
+                } else {
+                    false
+                }
             })
             .unwrap()
             .unwrap()
-            .get_position();
-        self.get_all_opponent_moves()
-            .iter()
-            .any(|r#move| r#move.get_end_position() == king_position)
+            .get_position()
+    }
+
+    /// Returns true if the current player is under check.
+    pub fn is_checked(&self) -> bool {
+        let king_pos = self.find_current_players_king();
+        let swapped_state = GameState::switch_player(&self);
+        let moves = swapped_state.get_all_moves_unchecked();
+        moves.iter().any(|m| m.get_end_position() == king_pos)
     }
 
     /// If a match has resulted in a win, returns the winning player. Otherwise
@@ -239,7 +239,6 @@ impl GameState {
     pub fn is_promotion_move(&self, r#move: Move) -> bool {
         let (start_row, start_col) = r#move.get_current_position().as_tuple();
         let end_pos = r#move.get_end_position();
-        let (end_row, col) = end_pos.as_tuple();
         let moved_piece = &self.board[start_row as usize][start_col as usize];
         if let Some(Piece::Pawn(_, _)) = moved_piece {
             self.is_end_row(end_pos)
@@ -298,7 +297,11 @@ mod tests {
     }
     #[test]
     fn test_init_pawn_moves() {
-        let board = make_board!(Piece::new_pawn(make_pos!(1, 0), Player::White, true));
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(1, 0), Player::White, true),
+            Piece::new_king(make_pos!(3, 1), Player::White, false),
+            Piece::new_king(make_pos!(3, 5), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(1, 0);
         let mut expected_moves = vec![make_move!(1, 0, 2, 0), make_move!(1, 0, 3, 0)];
@@ -306,7 +309,11 @@ mod tests {
     }
     #[test]
     fn test_pawn_non_first_moves() {
-        let board = make_board!(Piece::new_pawn(make_pos!(2, 0), Player::White, false));
+        let board = make_board!(
+            Piece::new_pawn(make_pos!(2, 0), Player::White, false),
+            Piece::new_king(make_pos!(0, 0), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(2, 0);
         let mut expected_moves = vec![make_move!(2, 0, 3, 0)];
@@ -339,6 +346,8 @@ mod tests {
         let board = make_board!(
             Piece::new_pawn(make_pos!(4, 3), Player::White, false),
             Piece::new_pawn(make_pos!(5, 4), Player::Black, false),
+            Piece::new_king(make_pos!(0, 0), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(4, 3);
@@ -350,6 +359,8 @@ mod tests {
         let board = make_board!(
             Piece::new_pawn(make_pos!(2, 4), Player::White, false),
             Piece::new_pawn(make_pos!(4, 5), Player::Black, false),
+            Piece::new_king(make_pos!(0, 0), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let new_move = make_move!(2, 4, 4, 4);
@@ -362,7 +373,11 @@ mod tests {
     }
     #[test]
     fn test_knight_moves_center() {
-        let board = make_board!(Piece::new_knight(make_pos!(4, 3), Player::White),);
+        let board = make_board!(
+            Piece::new_knight(make_pos!(4, 3), Player::White),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(4, 3);
         let mut expected_moves = vec![
@@ -379,7 +394,11 @@ mod tests {
     }
     #[test]
     fn test_knight_moves_corner() {
-        let board = make_board!(Piece::new_knight(make_pos!(0, 0), Player::White),);
+        let board = make_board!(
+            Piece::new_knight(make_pos!(0, 0), Player::White),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(0, 0);
         let mut expected_moves = vec![make_move!(0, 0, 1, 2), make_move!(0, 0, 2, 1)];
@@ -392,6 +411,8 @@ mod tests {
             Piece::new_knight(make_pos!(0, 0), Player::White),
             Piece::new_pawn(make_pos!(1, 2), Player::Black, false),
             Piece::new_pawn(make_pos!(2, 1), Player::Black, false),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(0, 0);
@@ -404,6 +425,8 @@ mod tests {
             Piece::new_knight(make_pos!(0, 0), Player::White),
             Piece::new_pawn(make_pos!(1, 2), Player::White, true),
             Piece::new_pawn(make_pos!(2, 1), Player::White, false),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(0, 0);
@@ -412,7 +435,11 @@ mod tests {
     }
     #[test]
     fn test_bishop_moves() {
-        let board = make_board!(Piece::new_bishop(make_pos!(3, 3), Player::White),);
+        let board = make_board!(
+            Piece::new_bishop(make_pos!(3, 3), Player::White),
+            Piece::new_king(make_pos!(3, 1), Player::White, false),
+            Piece::new_king(make_pos!(3, 5), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
         let mut expected_moves = vec![
@@ -440,6 +467,8 @@ mod tests {
             Piece::new_bishop(make_pos!(1, 5), Player::Black),
             Piece::new_bishop(make_pos!(5, 5), Player::Black),
             Piece::new_bishop(make_pos!(5, 1), Player::Black),
+            Piece::new_king(make_pos!(3, 1), Player::White, false),
+            Piece::new_king(make_pos!(3, 5), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -463,6 +492,8 @@ mod tests {
             Piece::new_bishop(make_pos!(1, 5), Player::White),
             Piece::new_bishop(make_pos!(5, 5), Player::White),
             Piece::new_bishop(make_pos!(5, 1), Player::White),
+            Piece::new_king(make_pos!(3, 1), Player::White, false),
+            Piece::new_king(make_pos!(3, 5), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -476,7 +507,11 @@ mod tests {
     }
     #[test]
     fn test_rook_moves() {
-        let board = make_board!(Piece::new_rook(make_pos!(3, 3), Player::White, false),);
+        let board = make_board!(
+            Piece::new_rook(make_pos!(3, 3), Player::White, false),
+            Piece::new_king(make_pos!(1, 1), Player::White, false),
+            Piece::new_king(make_pos!(5, 5), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
         let mut expected_moves = vec![
@@ -505,6 +540,8 @@ mod tests {
             Piece::new_rook(make_pos!(3, 1), Player::Black, false),
             Piece::new_rook(make_pos!(5, 3), Player::Black, false),
             Piece::new_rook(make_pos!(3, 5), Player::Black, false),
+            Piece::new_king(make_pos!(0, 0), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -528,6 +565,8 @@ mod tests {
             Piece::new_rook(make_pos!(3, 1), Player::White, false),
             Piece::new_rook(make_pos!(5, 3), Player::White, false),
             Piece::new_rook(make_pos!(3, 5), Player::White, false),
+            Piece::new_king(make_pos!(0, 0), Player::White, false),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -541,7 +580,11 @@ mod tests {
     }
     #[test]
     fn test_queen_moves() {
-        let board = make_board!(Piece::new_queen(make_pos!(3, 3), Player::White),);
+        let board = make_board!(
+            Piece::new_queen(make_pos!(3, 3), Player::White),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(6, 7), Player::Black, false),
+        );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
         let mut expected_moves = vec![
@@ -579,14 +622,16 @@ mod tests {
     fn test_queen_can_take() {
         let board = make_board!(
             Piece::new_queen(make_pos!(3, 3), Player::White),
-            Piece::new_queen(make_pos!(2, 3), Player::Black),
-            Piece::new_queen(make_pos!(2, 2), Player::Black),
-            Piece::new_queen(make_pos!(3, 2), Player::Black),
-            Piece::new_queen(make_pos!(4, 2), Player::Black),
-            Piece::new_queen(make_pos!(4, 3), Player::Black),
-            Piece::new_queen(make_pos!(4, 4), Player::Black),
-            Piece::new_queen(make_pos!(3, 4), Player::Black),
-            Piece::new_queen(make_pos!(2, 4), Player::Black),
+            Piece::new_bishop(make_pos!(2, 3), Player::Black),
+            Piece::new_bishop(make_pos!(2, 2), Player::Black),
+            Piece::new_bishop(make_pos!(3, 2), Player::Black),
+            Piece::new_bishop(make_pos!(4, 2), Player::Black),
+            Piece::new_bishop(make_pos!(4, 3), Player::Black),
+            Piece::new_bishop(make_pos!(4, 4), Player::Black),
+            Piece::new_bishop(make_pos!(3, 4), Player::Black),
+            Piece::new_bishop(make_pos!(2, 4), Player::Black),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(6, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -606,14 +651,16 @@ mod tests {
     fn test_queen_blocked() {
         let board = make_board!(
             Piece::new_queen(make_pos!(3, 3), Player::White),
-            Piece::new_queen(make_pos!(2, 3), Player::White),
-            Piece::new_queen(make_pos!(2, 2), Player::White),
-            Piece::new_queen(make_pos!(3, 2), Player::White),
-            Piece::new_queen(make_pos!(4, 2), Player::White),
-            Piece::new_queen(make_pos!(4, 3), Player::White),
-            Piece::new_queen(make_pos!(4, 4), Player::White),
-            Piece::new_queen(make_pos!(3, 4), Player::White),
-            Piece::new_queen(make_pos!(2, 4), Player::White),
+            Piece::new_bishop(make_pos!(2, 3), Player::White),
+            Piece::new_bishop(make_pos!(2, 2), Player::White),
+            Piece::new_bishop(make_pos!(3, 2), Player::White),
+            Piece::new_bishop(make_pos!(4, 2), Player::White),
+            Piece::new_bishop(make_pos!(4, 3), Player::White),
+            Piece::new_bishop(make_pos!(4, 4), Player::White),
+            Piece::new_bishop(make_pos!(3, 4), Player::White),
+            Piece::new_bishop(make_pos!(2, 4), Player::White),
+            Piece::new_king(make_pos!(2, 7), Player::White, false),
+            Piece::new_king(make_pos!(6, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -643,6 +690,7 @@ mod tests {
             Piece::new_king(make_pos!(3, 3), Player::White, false),
             Piece::new_bishop(make_pos!(3, 2), Player::Black),
             Piece::new_bishop(make_pos!(3, 4), Player::Black),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);
@@ -664,6 +712,7 @@ mod tests {
             Piece::new_king(make_pos!(3, 3), Player::White, false),
             Piece::new_bishop(make_pos!(3, 2), Player::White),
             Piece::new_bishop(make_pos!(3, 4), Player::White),
+            Piece::new_king(make_pos!(7, 7), Player::Black, false),
         );
         let state = GameState::from_board(board, Player::White, None).unwrap();
         let pos = make_pos!(3, 3);

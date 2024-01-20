@@ -172,7 +172,7 @@ impl Piece {
     pub fn can_castle(&self) -> bool {
         match *self {
             Self::King(_, result) | Self::Rook(_, result) => result,
-            _ => unreachable!("This method should be used on a king or a rook."),
+            _ => false,
         }
     }
     /// Checks if the pawn is about to make it's first move; if so - returns
@@ -181,7 +181,7 @@ impl Piece {
         if let Self::Pawn(_, result) = *self {
             result
         } else {
-            unreachable!("This method should be used on a pawn.")
+            false
         }
     }
     fn get_moves_lines(&self, directions: Vec<(i32, i32)>, state: &GameState) -> Vec<Move> {
@@ -249,6 +249,19 @@ impl Piece {
     /// game state object. The resulting moves are guaranteed to be legal
     /// according to the rules of the game.
     pub fn get_moves(&self, state: &GameState) -> Vec<Move> {
+        let result = self.get_unchecked_moves(state);
+        result
+            .into_iter()
+            .filter(move |m| {
+                let new_state = GameState::transform_state(state, *m, None);
+                let new_state = new_state.switch_player();
+                !new_state.is_checked()
+            })
+            .collect_vec()
+    }
+    /// Returns all the moves that a piece can *physically* make, therefore not
+    /// taking into account possible consequences such as checks, pins, etc.
+    pub fn get_unchecked_moves(&self, state: &GameState) -> Vec<Move> {
         match *self {
             Self::Pawn(_, first_move) => {
                 let (row, col) = self.get_position().as_tuple();
@@ -356,9 +369,6 @@ impl Piece {
                     .filter(|&x| x != (0, 0))
                     .collect_vec();
                 let mut result = self.get_moves_shifts(shifts, state);
-                let (row, _) = self.get_position().as_tuple();
-                // TODO: add rules for when enemy pieces attack the squares
-                // between the king and the rook.
 
                 if can_castle {
                     if let Some(chess_move) = self.check_castle_move(state, false) {
@@ -370,6 +380,43 @@ impl Piece {
                 }
                 result
             }
+        }
+    }
+    pub fn shift(self, new_pos: Position) -> Self {
+        match self {
+            Self::Pawn(
+                SharedData {
+                    position: _,
+                    player,
+                },
+                _,
+            ) => Self::new_pawn(new_pos, player, false),
+            Self::Knight(SharedData {
+                position: _,
+                player,
+            }) => Self::new_knight(new_pos, player),
+            Self::Bishop(SharedData {
+                position: _,
+                player,
+            }) => Self::new_bishop(new_pos, player),
+            Self::Rook(
+                SharedData {
+                    position: _,
+                    player,
+                },
+                _,
+            ) => Self::new_pawn(new_pos, player, false),
+            Self::Queen(SharedData {
+                position: _,
+                player,
+            }) => Self::new_queen(new_pos, player),
+            Self::King(
+                SharedData {
+                    position: _,
+                    player,
+                },
+                _,
+            ) => Self::new_king(new_pos, player, false),
         }
     }
 }
