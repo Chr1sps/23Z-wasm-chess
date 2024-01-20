@@ -44,3 +44,35 @@ npm preview # launches the app
 docker build -t wasm-chess-game .
 docker run --detach --name wasm-chess-game --rm -p 4173:4173 wasm-chess-game
 ```
+
+## Tests
+
+The project utilizes Vitest for testing the frontend and cargo test for testing
+the backend.
+
+To run tests for both the frontend and the backend you can use a single
+command:
+
+```shell
+npm run test:all
+```
+
+To run tests for each of them separately:
+
+```shell
+npm run test # runs vitest
+npm run test:wasm # runs cargo test
+```
+
+## Linting and formatting
+
+The frontend part utilizes Prettier with ESLint for formatting and linting,
+while the WASM backend uses cargo's fmt and clippy.
+
+Additionally, running
+
+```shell
+npm run check
+```
+
+will run TypeScript's typechecking on the frontend.

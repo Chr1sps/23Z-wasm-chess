@@ -11,7 +11,9 @@
 		"host": "vite preview --host 0.0.0.0",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "vitest",
+		"test": "vitest run",
+		"test:wasm": "cargo test --manifest-path=wasm/Cargo.toml",
+		"test:all": "vitest run && cargo test --manifest-path=wasm/Cargo.toml",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write ."
 	},
